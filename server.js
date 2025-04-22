@@ -61,9 +61,9 @@ async function verifyProject(req, res, next) {
     console.log(`[VERIFY] Verifying project: ${projectId}`);
     
     const { data: project, error } = await supabase
-      .from('project_tokens')
+      .from('user_projects')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('id', projectId)
       .single();
 
     if (error || !project) {
@@ -93,38 +93,20 @@ async function incrementRequestCount(projectId, endpointType) {
 
     // 1. Busca ou cria registro
     const { data: currentData, error: fetchError } = await supabase
-      .from('project_requests')
+      .from('user_projects')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('id', projectId)
       .single();
 
-    // Registro não existe - cria novo
-    if (fetchError || !currentData) {
-      console.log('[INCREMENT] Creating new record');
-      const { error: createError } = await supabase
-        .from('project_requests')
-        .insert({
-          project_id: projectId,
-          requests_today: 1,
-          total_requests: 1,
-          last_request_date: today,
-          daily_requests: { [today]: 1 },
-          level: 1,
-          last_endpoint: endpointType
-        });
-      
-      if (createError) throw createError;
-      return { status: 'created' };
-    }
+    
 
     // 2. Atualiza contadores
     const updateData = {
       requests_today: currentData.requests_today + 1,
       total_requests: currentData.total_requests + 1,
       last_request_date: today,
-      daily_requests: { ...currentData.daily_requests },
-      updated_at: new Date().toISOString(),
-      last_endpoint: endpointType
+      daily_requests: { ...currentData.daily_requests }
+      
     };
 
     // Atualiza contador diário
@@ -137,9 +119,9 @@ async function incrementRequestCount(projectId, endpointType) {
 
     // 4. Executa update
     const { error: updateError } = await supabase
-      .from('project_requests')
+      .from('user_projects')
       .update(updateData)
-      .eq('project_id', projectId);
+      .eq('id', projectId);
 
     if (updateError) throw updateError;
     
@@ -207,9 +189,9 @@ app.get('/:id/animes', verifyProject, async (req, res) => {
 
     // Verificação adicional
     const { data: projectData } = await supabase
-      .from('project_requests')
+      .from('user_projects')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('id', projectId)
       .single();
 
     res.json({
@@ -307,9 +289,9 @@ app.get('/test/:id', async (req, res) => {
   try {
     await incrementRequestCount(req.params.id, 'test');
     const { data } = await supabase
-      .from('project_requests')
+      .from('user_projects')
       .select('*')
-      .eq('project_id', req.params.id)
+      .eq('id', req.params.id)
       .single();
       
     res.json({
