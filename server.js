@@ -6,12 +6,12 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Configuração do Supabase
+// Supabase Configuration
 const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Configuração Xtream API
+// Xtream API Configuration
 const XTREAM_CONFIG = {
   host: 'sigcine1.space',
   port: 80,
@@ -23,7 +23,7 @@ const XTREAM_CONFIG = {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Middleware CORS para Sketchware
+// CORS Middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -31,47 +31,105 @@ app.use((req, res, next) => {
   next();
 });
 
-// Sistema de Monitoramento de Requisições
+// Enhanced Request Tracker with Database Logging
 const requestTracker = {
-  requests: new Map(),
-  
-  track: function(projectId, endpoint) {
-    const now = Date.now();
-    const key = `${projectId}_${endpoint}`;
-    
-    if (!this.requests.has(key)) {
-      this.requests.set(key, []);
+  trackRequest: async function(projectId, userId, endpoint, req) {
+    try {
+      const { error } = await supabase
+        .from('request_logs')
+        .insert({
+          project_id: projectId,
+          user_id: userId,
+          endpoint: endpoint,
+          method: req.method,
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent')
+        });
+      
+      if (error) throw error;
+      
+      return await this.updateProjectCounters(projectId);
+    } catch (err) {
+      console.error('[TRACKING ERROR]', err);
+      throw err;
     }
-    
-    this.requests.get(key).push(now);
-    console.log(`[TRACK] ${key} - ${now}`);
   },
   
-  getCount: function(projectId, endpoint) {
-    const key = `${projectId}_${endpoint}`;
-    return this.requests.has(key) ? this.requests.get(key).length : 0;
-  }
-};
-
-// Middleware de Verificação de Projeto
-async function verifyProject(req, res, next) {
-  const projectId = req.params.id;
-  
-  try {
-    console.log(`[VERIFY] Verifying project: ${projectId}`);
+  updateProjectCounters: async function(projectId) {
+    const today = new Date().toISOString().split('T')[0];
     
-    const { data: project, error } = await supabase
+    const { data: project, error: fetchError } = await supabase
       .from('user_projects')
       .select('*')
       .eq('id', projectId)
       .single();
 
-    if (error || !project) {
-      console.error('[VERIFY ERROR] Project not found:', projectId);
+    if (fetchError) throw fetchError;
+    if (!project) throw new Error('Project not found');
+
+    const updateData = {
+      requests_today: project.requests_today + 1,
+      total_requests: project.total_requests + 1,
+      last_request_date: today,
+      daily_requests: { ...project.daily_requests },
+      activity_data: { ...project.activity_data }
+    };
+
+    // Update daily requests
+    updateData.daily_requests[today] = (updateData.daily_requests[today] || 0) + 1;
+
+    // Update activity data
+    const currentHour = new Date().getHours();
+    updateData.activity_data[currentHour] = (updateData.activity_data[currentHour] || 0) + 1;
+
+    // Check for level upgrade
+    if (updateData.total_requests >= (project.level * 100)) {
+      updateData.level = project.level + 1;
+    }
+
+    const { error: updateError } = await supabase
+      .from('user_projects')
+      .update(updateData)
+      .eq('id', projectId);
+
+    if (updateError) throw updateError;
+
+    return updateData;
+  }
+};
+
+// Project Verification Middleware
+async function verifyProject(req, res, next) {
+  const projectId = req.params.id;
+  const authToken = req.headers.authorization?.split(' ')[1];
+  
+  try {
+    // Verify project exists and get user info
+    const { data: project, error: projectError } = await supabase
+      .from('user_projects')
+      .select('*, user:user_id(*)')
+      .eq('id', projectId)
+      .single();
+
+    if (projectError || !project) {
       return res.status(404).json({ 
         status: 'error',
         error: 'Project not found'
       });
+    }
+
+    // If we have an auth token, verify it matches the project owner
+    if (authToken) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
+      
+      if (authError || user.id !== project.user_id) {
+        return res.status(403).json({ 
+          status: 'error',
+          error: 'Unauthorized access'
+        });
+      }
+      
+      req.user = user;
     }
 
     req.project = project;
@@ -85,65 +143,21 @@ async function verifyProject(req, res, next) {
   }
 }
 
-// Função para Incrementar Contagem
-async function incrementRequestCount(projectId, endpointType) {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    console.log(`[INCREMENT] Starting for ${projectId}`);
-
-    // 1. Busca ou cria registro
-    const { data: currentData, error: fetchError } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('id', projectId)
-      .single();
-
-    
-
-    // 2. Atualiza contadores
-    const updateData = {
-      requests_today: currentData.requests_today + 1,
-      total_requests: currentData.total_requests + 1,
-      last_request_date: today,
-      daily_requests: { ...currentData.daily_requests }
-      
-    };
-
-    // Atualiza contador diário
-    updateData.daily_requests[today] = (updateData.daily_requests[today] || 0) + 1;
-
-    // 3. Atualiza nível
-    if (updateData.total_requests >= (currentData.level * 100)) {
-      updateData.level = currentData.level + 1;
-    }
-
-    // 4. Executa update
-    const { error: updateError } = await supabase
-      .from('user_projects')
-      .update(updateData)
-      .eq('id', projectId);
-
-    if (updateError) throw updateError;
-    
-    console.log(`[INCREMENT] Success for ${projectId}`);
-    return { status: 'updated' };
-    
-  } catch (error) {
-    console.error('[INCREMENT ERROR]', error);
-    throw error;
-  }
-}
-
-// Endpoint de Filmes
+// Movies Endpoint
 app.get('/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
-    console.log(`[FILMES] Request from ${projectId}`);
+    const userId = req.user?.id;
 
-    // Contabiliza requisição
-    await incrementRequestCount(projectId, 'filmes');
-    requestTracker.track(projectId, 'filmes');
+    // Track request
+    const counters = await requestTracker.trackRequest(
+      projectId, 
+      userId, 
+      'filmes', 
+      req
+    );
 
+    // Fetch movies data
     const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`;
     const apiResponse = await fetch(apiUrl);
     
@@ -153,6 +167,7 @@ app.get('/:id/filmes', verifyProject, async (req, res) => {
 
     const filmesData = await apiResponse.json();
 
+    // Format response
     const filmesComLinks = filmesData.map(filme => ({
       ...filme,
       player: `${req.protocol}://${req.get('host')}/${projectId}/stream/${filme.stream_id}.mp4`,
@@ -161,9 +176,12 @@ app.get('/:id/filmes', verifyProject, async (req, res) => {
 
     res.json({
       status: 'success',
-      projectId,
-      timestamp: new Date().toISOString(),
-      requestCount: requestTracker.getCount(projectId, 'filmes'),
+      project: {
+        id: projectId,
+        name: req.project.name,
+        level: req.project.level,
+        requests_today: counters.requests_today
+      },
       data: filmesComLinks
     });
 
@@ -177,30 +195,28 @@ app.get('/:id/filmes', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint de Animes
+// Animes Endpoint
 app.get('/:id/animes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
-    console.log(`[ANIMES] Request from ${projectId}`);
+    const userId = req.user?.id;
 
-    // Contabiliza requisição
-    const incrementResult = await incrementRequestCount(projectId, 'animes');
-    requestTracker.track(projectId, 'animes');
-
-    // Verificação adicional
-    const { data: projectData } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('id', projectId)
-      .single();
+    // Track request
+    const counters = await requestTracker.trackRequest(
+      projectId, 
+      userId, 
+      'animes', 
+      req
+    );
 
     res.json({
       status: 'success',
-      projectId,
-      timestamp: new Date().toISOString(),
-      incrementResult,
-      requestCount: requestTracker.getCount(projectId, 'animes'),
-      dbData: projectData,
+      project: {
+        id: projectId,
+        name: req.project.name,
+        level: req.project.level,
+        requests_today: counters.requests_today
+      },
       data: generateAnimeData(projectId)
     });
 
@@ -214,7 +230,7 @@ app.get('/:id/animes', verifyProject, async (req, res) => {
   }
 });
 
-// Gerador de Dados de Animes
+// Anime Data Generator
 function generateAnimeData(projectId) {
   const baseAnimes = [
     { id: 1, title: "Attack on Titan", episodes: 75, year: 2013 },
@@ -229,11 +245,13 @@ function generateAnimeData(projectId) {
     episodes: anime.episodes + (hash % 5),
     year: anime.year + (hash % 3),
     rating: (3.5 + (hash % 5 * 0.3)).toFixed(1),
-    projectSpecific: `custom-${projectId.slice(0, 3)}-${anime.id}`
+    projectSpecific: `custom-${projectId.slice(0, 3)}-${anime.id}`,
+    stream_url: `/stream/anime_${anime.id}`,
+    icon_url: `/icon/anime_${anime.id}`
   }));
 }
 
-// Endpoint de Stream
+// Stream Endpoint
 app.get('/:id/stream/:streamId', verifyProject, async (req, res) => {
   try {
     const streamId = req.params.streamId;
@@ -264,12 +282,12 @@ app.get('/:id/stream/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint de Ícone
+// Icon Endpoint
 app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
   try {
     const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
       <rect width="100" height="100" fill="#ddd"/>
-      <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
+      <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">${req.params.streamId}</text>
     </svg>`;
     
     res.set({
@@ -284,34 +302,55 @@ app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Rota de Teste
-app.get('/test/:id', async (req, res) => {
+// Project Statistics Endpoint
+app.get('/:id/stats', verifyProject, async (req, res) => {
   try {
-    await incrementRequestCount(req.params.id, 'test');
-    const { data } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('id', req.params.id)
-      .single();
-      
+    const { data: logs, error } = await supabase
+      .from('request_logs')
+      .select('endpoint, created_at')
+      .eq('project_id', req.params.id)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
     res.json({
       status: 'success',
-      data: data || { error: 'No data found' }
+      project: {
+        id: req.project.id,
+        name: req.project.name,
+        total_requests: req.project.total_requests,
+        level: req.project.level
+      },
+      recent_activity: logs,
+      daily_requests: req.project.daily_requests,
+      activity_data: req.project.activity_data
     });
   } catch (err) {
-    res.status(500).json({
+    console.error('[STATS ERROR]', err);
+    res.status(500).json({ 
       status: 'error',
-      error: err.message
+      error: 'Failed to fetch statistics'
     });
   }
 });
 
-// Rota Frontend
+// Frontend Route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Inicia Servidor
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('[GLOBAL ERROR]', err);
+  res.status(500).json({
+    status: 'error',
+    error: 'Internal server error',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Start Server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
