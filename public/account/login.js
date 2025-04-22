@@ -22,8 +22,60 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   };
 
+  // Alert function
+  function showAlert(message, type) {
+    const alert = document.createElement('div');
+    alert.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white font-semibold tracking-wider z-50 ${
+      type === 'success' ? 'bg-green-600' : 
+      type === 'danger' ? 'bg-red-600' :
+      type === 'warning' ? 'bg-yellow-600' :
+      'bg-blue-600'
+    }`;
+    alert.textContent = message;
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+      alert.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+      setTimeout(() => alert.remove(), 500);
+    }, 3000);
+  }
+
+  // First check session to avoid infinite redirect
+  async function checkSession() {
+    try {
+      const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        showAlert('Error checking session: ' + error.message, 'danger');
+        return false;
+      }
+      
+      if (session) {
+        if (!window.location.pathname.includes('home.html')) {
+          showAlert('Redirecting to home page...', 'success');
+          setTimeout(() => {
+            window.location.href = '../main/home.html';
+          }, 1500);
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      showAlert('Session check error: ' + err.message, 'danger');
+      return false;
+    }
+  }
+
+  // Check session on page load
+  const hasSession = await checkSession();
+  if (hasSession) return;
+
   // Initialize particles.js if the element exists
-  if (document.getElementById('particles-js')) {
+  if (document.getElementById('particles-js') && typeof particlesJS !== 'undefined') {
     particlesJS('particles-js', {
       "particles": {
         "number": {
@@ -132,24 +184,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   }
 
-  // Alert function
-  function showAlert(message, type) {
-    const alert = document.createElement('div');
-    alert.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white font-semibold tracking-wider z-50 ${
-      type === 'success' ? 'bg-green-600' : 
-      type === 'danger' ? 'bg-red-600' :
-      type === 'warning' ? 'bg-yellow-600' :
-      'bg-blue-600'
-    }`;
-    alert.textContent = message;
-    document.body.appendChild(alert);
-    
-    setTimeout(() => {
-      alert.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-      setTimeout(() => alert.remove(), 500);
-    }, 3000);
-  }
-
   // Form submission
   const form = document.getElementById('loginForm');
   if (form) {
@@ -162,24 +196,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
       if (!email || !password) {
         showAlert('Email and password are required', 'warning');
-        return;
+        return false;
       }
 
       try {
-        // Initialize Supabase
         const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        window.supabase = supabase;
 
-        // Set session duration based on "Remember me"
         if (rememberMe) {
-          // 30 days expiration for "Remember me"
           await supabase.auth.setSession({
-            expires_in: 60 * 60 * 24 * 30 // 30 days in seconds
+            expires_in: 60 * 60 * 24 * 30
           });
         }
 
+        showAlert('Processing login...', 'info');
+        
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password
@@ -187,23 +219,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         if (error) {
           showAlert('Login failed: ' + error.message, 'danger');
-          return;
+          return false;
         }
 
-        // Show success message and redirect
         showAlert('Login successful! Redirecting...', 'success');
         
-        // Store user data in localStorage if needed
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        // Redirect to dashboard or home page after 2 seconds
         setTimeout(() => {
-          window.location.href = '../main/home.html'; // Change to your desired redirect page
+          if (!window.location.pathname.includes('home.html')) {
+            window.location.href = '../main/home.html';
+          }
         }, 2000);
 
       } catch (err) {
         showAlert('Unexpected error: ' + err.message, 'danger');
-        console.error(err);
+        return false;
       }
     });
   }
@@ -220,6 +251,8 @@ document.addEventListener('DOMContentLoaded', async function() {
           const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
           const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
           const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+          
+          showAlert('Sending reset email...', 'info');
           
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: window.location.origin + '/reset-password.html'
