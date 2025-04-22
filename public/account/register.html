@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Gate - Register</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="register.css">
+</head>
+<body class="min-h-screen">
+    <!-- Particles Container -->
+    <div id="particles-js"></div>
+    
+    <!-- Cyber Lines -->
+    <div class="cyber-line"></div>
+    <div class="cyber-line"></div>
+    
+    <div class="content-wrapper">
+        <!-- Registration Container -->
+        <div class="min-h-screen flex items-center justify-center px-4 py-12">
+            <div class="max-w-md w-full space-y-8">
+                <!-- Logo & Header -->
+                <div class="text-center fade-in-up">
+                    <div class="flex items-center justify-center mb-4">
+                        <i class="bi bi-gate text-5xl text-blue-400 glow-text"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-white tracking-wider glow-text">SHADOW GATE</h2>
+                    <p class="mt-2 text-sm text-gray-400">Create Your Secure Account</p>
+                </div>
+                
+                <!-- Registration Form -->
+                <div class="register-card p-8 fade-in-up delay-100">
+                    <h3 class="text-xl font-bold text-center mb-6 text-blue-400 tracking-wider">
+                        REGISTER
+                    </h3>
+                    <form class="space-y-6" id="registerForm">
+                        <!-- Full Name -->
+                        <div class="neon-input">
+                            <label for="fullname" class="block text-sm font-medium text-gray-300 mb-2 tracking-wider">FULL NAME</label>
+                            <div class="input-container">
+                                <i class="bi bi-person input-icon"></i>
+                                <input id="fullname" name="fullname" type="text" required class="form-input" placeholder="John Doe">
+                            </div>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="neon-input">
+                            <label for="email" class="block text-sm font-medium text-gray-300 mb-2 tracking-wider">EMAIL ADDRESS</label>
+                            <div class="input-container">
+                                <i class="bi bi-envelope input-icon"></i>
+                                <input id="email" name="email" type="email" required class="form-input" placeholder="user@example.com">
+                            </div>
+                        </div>
+                        
+                        <!-- Password -->
+                        <div class="neon-input">
+                            <label for="password" class="block text-sm font-medium text-gray-300 mb-2 tracking-wider">PASSWORD</label>
+                            <div class="input-container">
+                                <i class="bi bi-shield-lock input-icon"></i>
+                                <input id="password" name="password" type="password" required class="form-input" placeholder="••••••••••">
+                                <i class="bi bi-eye password-toggle" id="toggle-password-icon"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Confirm Password -->
+                        <div class="neon-input">
+                            <label for="confirmPassword" class="block text-sm font-medium text-gray-300 mb-2 tracking-wider">CONFIRM PASSWORD</label>
+                            <div class="input-container">
+                                <i class="bi bi-shield-check input-icon"></i>
+                                <input id="confirmPassword" name="confirmPassword" type="password" required class="form-input" placeholder="••••••••••">
+                            </div>
+                        </div>
+                        
+                        <!-- Terms & Privacy -->
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="terms" class="text-gray-300">
+                                    I agree to the <a href="#" class="text-blue-400 hover:text-blue-300">Terms of Service</a> and <a href="#" class="text-blue-400 hover:text-blue-300">Privacy Policy</a>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Register Button -->
+                        <div>
+                            <button type="submit" class="register-button w-full flex justify-center items-center">
+                                <i class="bi bi-person-plus mr-2"></i>
+                                CREATE ACCOUNT
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-6">
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-700"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-gray-800 text-gray-400 rounded">
+                                    Or register with
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 grid grid-cols-3 gap-3">
+                            <div>
+                                <a href="#" class="social-button w-full flex items-center justify-center">
+                                    <i class="bi bi-google text-lg"></i>
+                                </a>
+                            </div>
+                            <div>
+                                <a href="#" class="social-button w-full flex items-center justify-center">
+                                    <i class="bi bi-github text-lg"></i>
+                                </a>
+                            </div>
+                            <div>
+                                <a href="#" class="social-button w-full flex items-center justify-center">
+                                    <i class="bi bi-facebook text-lg"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sign In Link -->
+                <div class="text-center mt-4 fade-in-up delay-300">
+                    <p class="text-sm text-gray-400">
+                        Already have an account? 
+                        <a href="login.html" class="text-blue-400 hover:text-blue-300 font-medium">
+                            Sign in
+                        </a>
+                    </p>
+                    <a href="#" class="text-xs text-gray-500 hover:text-gray-400 mt-2 inline-block">
+                        <i class="bi bi-arrow-left mr-1"></i> Back to home
+                    </a>
+                </div>
+                
+                <!-- Security Notice -->
+                <div class="text-center text-xs text-gray-500 fade-in-up delay-400">
+                    <p>
+                        <i class="bi bi-shield-check text-blue-500 mr-1"></i>
+                        Secured with end-to-end encryption and multi-factor authentication
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../auth.js"></script>
+    <script src="register.js"></script>
+</body>
+</html>
