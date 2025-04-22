@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Gate - Movies & TV API</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body class="min-h-screen">
+    <div id="particles-js"></div>
+    <div class="content-wrapper">
+        <header class="bg-gradient-to-r from-gray-900 to-blue-900 p-3 shadow-lg">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex items-center">
+                    <i class="bi bi-film text-2xl text-blue-400 glow-text"></i>
+                    <span class="ml-2 font-bold text-xl tracking-wider text-white glow-text">SHADOW GATE MOVIES</span>
+                </div>
+                <div class="hidden md:flex space-x-6">
+                    <a href="#features" class="text-gray-300 hover:text-white transition-colors animated-border">Features</a>
+                    <a href="#endpoints" class="text-gray-300 hover:text-white transition-colors animated-border">Endpoints</a>
+                    <a href="#pricing" class="text-gray-300 hover:text-white transition-colors animated-border">Pricing</a>
+                    <a href="#docs" class="text-gray-300 hover:text-white transition-colors animated-border">Docs</a>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/login" class="text-white hover:text-blue-400 transition-colors px-2 py-1">Login</a>
+                    <a href="/register" class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition-colors">Register</a>
+                </div>
+                <div class="md:hidden"><i class="bi bi-list text-2xl text-white"></i></div>
+            </div>
+        </header>
+
+        <section class="hero-gradient py-20">
+            <div class="container mx-auto px-4">
+                <div class="max-w-3xl mx-auto text-center fade-in-up">
+                    <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-wide glow-text">Complete <span class="text-blue-400">Movies & TV</span> API</h1>
+                    <p class="text-xl text-gray-300 mb-8">Access comprehensive data with our secure API</p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <a href="account/login.html" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold tracking-wider shadow-glow">GET API KEY</a>
+                        <a href="#demo" class="bg-gray-800 text-white px-8 py-3 rounded-lg hover:bg-gray-700 transition-colors font-semibold tracking-wider"><i class="bi bi-play-circle mr-2"></i> TRY DEMO</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-10 overflow-hidden">
+            <div class="flex space-x-4">
+                <div class="grid grid-cols-5 gap-4 w-full">
+                    <div class="movie-poster h-64 bg-gray-800 rounded-lg overflow-hidden"><img src="https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg" alt="Movie Poster" class="w-full h-full object-cover"></div>
+                    <div class="movie-poster h-64 bg-gray-800 rounded-lg overflow-hidden"><img src="https://image.tmdb.org/t/p/w500/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg" alt="Movie Poster" class="w-full h-full object-cover"></div>
+                    <div class="movie-poster h-64 bg-gray-800 rounded-lg overflow-hidden"><img src="https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg" alt="Movie Poster" class="w-full h-full object-cover"></div>
+                    <div class="movie-poster h-64 bg-gray-800 rounded-lg overflow-hidden"><img src="https://image.tmdb.org/t/p/w500/kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg" alt="Movie Poster" class="w-full h-full object-cover"></div>
+                    <div class="movie-poster h-64 bg-gray-800 rounded-lg overflow-hidden"><img src="https://image.tmdb.org/t/p/w500/7gKI9hpEMcZUQpNgKrkDzJpbnNS.jpg" alt="Movie Poster" class="w-full h-full object-cover"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-10 bg-gray-900 bg-opacity-80">
+            <div class="container mx-auto px-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                    <div class="p-4 fade-in-up delay-100"><p class="text-3xl font-bold text-blue-400">500,000+</p><p class="text-gray-400 mt-1">Movies</p></div>
+                    <div class="p-4 fade-in-up delay-200"><p class="text-3xl font-bold text-blue-400">100,000+</p><p class="text-gray-400 mt-1">TV Shows</p></div>
+                    <div class="p-4 fade-in-up delay-300"><p class="text-3xl font-bold text-blue-400">2M+</p><p class="text-gray-400 mt-1">Actors & Crew</p></div>
+                    <div class="p-4 fade-in-up delay-400"><p class="text-3xl font-bold text-blue-400">99.9%</p><p class="text-gray-400 mt-1">Uptime</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="py-16">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold text-center mb-12 tracking-wider glow-text fade-in-up"><i class="bi bi-stars text-blue-400 mr-2"></i>KEY FEATURES</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="gate-card p-6 hover:transform hover:scale-105 transition-transform fade-in-up delay-100">
+                        <i class="bi bi-search text-5xl mb-4 feature-icon"></i>
+                        <h3 class="text-xl font-bold mb-2 text-white">Comprehensive Search</h3>
+                        <p class="text-gray-400">Advanced search capabilities with powerful filtering options.</p>
+                    </div>
+                    <div class="gate-card p-6 hover:transform hover:scale-105 transition-transform fade-in-up delay-200">
+                        <i class="bi bi-image text-5xl mb-4 feature-icon"></i>
+                        <h3 class="text-xl font-bold mb-2 text-white">Rich Media Content</h3>
+                        <p class="text-gray-400">Access high-quality posters and promotional materials.</p>
+                    </div>
+                    <div class="gate-card p-6 hover:transform hover:scale-105 transition-transform fade-in-up delay-300">
+                        <i class="bi bi-lightning-charge text-5xl mb-4 feature-icon"></i>
+                        <h3 class="text-xl font-bold mb-2 text-white">High Performance</h3>
+                        <p class="text-gray-400">Global CDN with edge caching for fast response times.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+      
+       <!-- Seção de Contato -->
+        <section id="contact" class="py-16 bg-gray-900 bg-opacity-80">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold text-center mb-12 tracking-wider glow-text fade-in-up">
+                    <i class="bi bi-chat-dots text-blue-400 mr-2"></i>CONTATO
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                    <a href="mailto:suporte@shadowgate.com" class="gate-card p-6 text-center hover:transform hover:scale-105 transition-transform">
+                        <i class="bi bi-envelope text-4xl text-blue-400 mb-4"></i>
+                        <h3 class="text-lg font-bold text-white mb-2">Email</h3>
+                        <p class="text-gray-400 text-sm">suporte@shadowgate.com</p>
+                    </a>
+
+                    <a href="https://wa.me/5511999999999" class="gate-card p-6 text-center hover:transform hover:scale-105 transition-transform">
+                        <i class="bi bi-whatsapp text-4xl text-green-400 mb-4"></i>
+                        <h3 class="text-lg font-bold text-white mb-2">WhatsApp</h3>
+                        <p class="text-gray-400 text-sm">+55 (11) 99999-9999</p>
+                    </a>
+
+                    <a href="#support" class="gate-card p-6 text-center hover:transform hover:scale-105 transition-transform">
+                        <i class="bi bi-headset text-4xl text-purple-400 mb-4"></i>
+                        <h3 class="text-lg font-bold text-white mb-2">Suporte 24h</h3>
+                        <p class="text-gray-400 text-sm">Chat ao vivo</p>
+                    </a>
+
+                    <a href="/docs" class="gate-card p-6 text-center hover:transform hover:scale-105 transition-transform">
+                        <i class="bi bi-file-text text-4xl text-orange-400 mb-4"></i>
+                        <h3 class="text-lg font-bold text-white mb-2">Documentação</h3>
+                        <p class="text-gray-400 text-sm">Guia de integração</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <a href="#" class="fixed bottom-6 right-6 bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors shadow-glow"><i class="bi bi-arrow-up"></i></a>
+    </div>
+    <script src="auth.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
