@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
         window.supabase = supabase;
         
-        const fullName = document.getElementById('full_name')?.value;
+        const fullName = document.getElementById('fullname')?.value;
         const email = document.getElementById('email')?.value;
         const passwordValue = document.getElementById('password')?.value;
 
@@ -275,14 +275,14 @@ document.addEventListener('DOMContentLoaded', async function() {
           return;
         }
 
-        const { error: signUpError } = await supabase.auth.signUp({ 
+        // Registra o usuário
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ 
           email, 
           password: passwordValue,
           options: {
             data: {
               full_name: fullName || ''
-            },
-            emailRedirectTo: window.location.origin
+            }
           }
         });
         
@@ -291,20 +291,23 @@ document.addEventListener('DOMContentLoaded', async function() {
           return;
         }
         
-        form.innerHTML = `
-        <div class="text-center py-6">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-800 mb-5">
-            <i class="bi bi-check-lg text-3xl text-white"></i>
-          </div>
-          <h3 class="text-xl font-bold text-white mb-2">Registration Successful!</h3>
-          <p class="text-gray-400 mb-5">Please check your email to verify your account</p>
-          <a href="login.html" class="text-blue-400 hover:text-blue-300">
-            Proceed to login
-          </a>
-        </div>
-        `;
-        
-        showAlert('Registration successful! Please check your email.', 'success');
+        // Faz login automaticamente após o registro
+        const { data: { session }, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password: passwordValue
+        });
+
+        if (signInError) {
+          showAlert('Registration successful! Please login.', 'success');
+          window.location.href = 'login.html';
+          return;
+        }
+
+        // Redireciona para a página principal
+        showAlert('Registration successful! Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = '../main/home.html';
+        }, 2000);
         
       } catch (err) {
         showAlert('Unexpected error: ' + err.message, 'danger');
