@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -156,66 +155,49 @@
                     </div>
                 </div>
 
-                <!-- URLs do Portal (Endpoints) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="gate-card p-4">
-                        <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                            <i class="bi bi-film text-blue-400 mr-2"></i> FILMES ENDPOINT
+                <!-- Gráfico de Atividade -->
+                <div class="gate-card p-4 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-medium text-gray-300 tracking-wider">
+                            <i class="bi bi-activity text-blue-400 mr-1"></i> GATE ACTIVITY
                         </h3>
-                        <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
-                            <span id="filmesEndpoint" class="text-xs text-white truncate font-mono">/<span id="projectId1" class="text-purple-300">PROJECT_ID</span>/filmes</span>
-                            <button class="copy-button p-1 text-gray-400 hover:text-blue-400 transition">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
+                        <div class="flex space-x-2">
+                            <button class="timeframe-btn active text-xs px-2 py-1 rounded bg-gray-700 text-white" data-days="7">7D</button>
+                            <button class="timeframe-btn text-xs px-2 py-1 rounded bg-gray-700 text-gray-400 hover:text-white" data-days="30">30D</button>
+                            <button class="timeframe-btn text-xs px-2 py-1 rounded bg-gray-700 text-gray-400 hover:text-white" data-days="90">90D</button>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">Acesso à API de filmes</p>
                     </div>
-                    
-                    <div class="gate-card p-4">
-                        <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                            <i class="bi bi-tv text-blue-400 mr-2"></i> ANIMES ENDPOINT
-                        </h3>
-                        <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
-                            <span id="animesEndpoint" class="text-xs text-white truncate font-mono">/<span id="projectId2" class="text-purple-300">PROJECT_ID</span>/animes</span>
-                            <button class="copy-button p-1 text-gray-400 hover:text-blue-400 transition">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">Acesso à API de animes</p>
+                    <div class="relative h-64">
+                        <canvas id="usageChart"></canvas>
                     </div>
                 </div>
 
-                <!-- Coleções -->
-                <div class="gate-card p-4 mb-6">
-                    <h3 class="text-sm font-medium text-gray-300 mb-3 tracking-wider flex items-center">
-                        <i class="bi bi-collection text-blue-400 mr-2"></i> COLEÇÕES DISPONÍVEIS
-                    </h3>
-                    <div class="space-y-3">
+                <!-- URLs do Portal -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="gate-card p-4">
+    <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
+        <i class="bi bi-code-slash text-blue-400 mr-2"></i> API ENDPOINT
+    </h3>
+    <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
+        <span id="apiEndpoint" class="text-xs text-white truncate font-mono">http://localhost:8000/gate-123</span>
+        <button class="copy-button p-1 text-gray-400 hover:text-blue-400 transition">
+            <i class="bi bi-clipboard"></i>
+        </button>
+    </div>
+    <p class="text-xs text-gray-500 mt-2">Access this URL for JSON response</p>
+</div>
+                    
+                    <div class="gate-card p-4">
+                        <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
+                            <i class="bi bi-google text-blue-400 mr-2"></i> SPREADSHEET LINK
+                        </h3>
                         <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
-                            <div class="flex items-center">
-                                <i class="bi bi-film text-purple-400 mr-2"></i>
-                                <span class="text-sm text-white">Filmes</span>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="text-xs text-gray-400 mr-3">432 itens</span>
-                                <button class="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded hover:bg-blue-800">
-                                    Gerenciar
-                                </button>
-                            </div>
+                            <span id="spreadsheetUrl" class="text-xs text-white truncate font-mono">https://docs.google.com/••••••••••</span>
+                            <button class="copy-button p-1 text-gray-400 hover:text-blue-400 transition">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
                         </div>
-                        
-                        <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
-                            <div class="flex items-center">
-                                <i class="bi bi-tv text-purple-400 mr-2"></i>
-                                <span class="text-sm text-white">Animes</span>
-                            </div>
-                            <div class="flex items-center">
-                                <span class="text-xs text-gray-400 mr-3">256 itens</span>
-                                <button class="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded hover:bg-blue-800">
-                                    Gerenciar
-                                </button>
-                            </div>
-                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Connected Google Sheets document</p>
                     </div>
                 </div>
             </div>
@@ -274,12 +256,12 @@
                     <div class="space-y-6">
                         <div>
                             <h4 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                                <i class="bi bi-braces text-blue-400 mr-2"></i> FETCH API EXEMPLO (FILMES)
+                                <i class="bi bi-braces text-blue-400 mr-2"></i> FETCH API EXAMPLE
                             </h4>
                             <div class="relative">
                                 <pre id="fetchSnippet" class="bg-gray-800 p-4 rounded-lg text-xs text-gray-300 font-mono overflow-x-auto">
 // JavaScript Fetch Example
-fetch('<span class="text-blue-300">${window.location.origin}/</span><span id="snippetProjectId" class="text-purple-300">PROJECT_ID</span>/filmes')
+fetch('<span class="text-blue-300">${window.location.origin}/api/</span><span id="snippetProjectId" class="text-purple-300">PROJECT_ID</span>')
   .then(response => response.json())
   .then(data => console.log(data))
   .catch(error => console.error('Error:', error));</pre>
@@ -291,15 +273,15 @@ fetch('<span class="text-blue-300">${window.location.origin}/</span><span id="sn
                         
                         <div>
                             <h4 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                                <i class="bi bi-braces text-blue-400 mr-2"></i> FETCH API EXEMPLO (ANIMES)
+                                <i class="bi bi-filetype-html text-blue-400 mr-2"></i> HTML FORM EXAMPLE
                             </h4>
                             <div class="relative">
-                                <pre id="fetchSnippetAnime" class="bg-gray-800 p-4 rounded-lg text-xs text-gray-300 font-mono overflow-x-auto">
-// JavaScript Fetch Example
-fetch('<span class="text-blue-300">${window.location.origin}/</span><span id="snippetProjectId2" class="text-purple-300">PROJECT_ID</span>/animes')
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));</pre>
+                                <pre id="htmlSnippet" class="bg-gray-800 p-4 rounded-lg text-xs text-gray-300 font-mono overflow-x-auto">
+&lt;form action="<span class="text-blue-300">${window.location.origin}/api/</span><span id="snippetProjectId2" class="text-purple-300">PROJECT_ID</span>/data" method="POST"&gt;
+  &lt;input type="text" name="username" placeholder="Username"&gt;
+  &lt;input type="email" name="email" placeholder="Email"&gt;
+  &lt;button type="submit"&gt;Submit&lt;/button&gt;
+&lt;/form&gt;</pre>
                                 <button class="copy-snippet absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-400 transition">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
