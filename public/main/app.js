@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const { error } = await supabase
             .from('user_projects')
             .update(project)
-            .eq('id', project.id)
+            .eq('project_id', project.id)
             .eq('user_id', user.id);
 
         if (error) {
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </div>
             `;
             card.addEventListener('click', () => {
-                window.location.href = `dashboard.html?project=${encodeURIComponent(project.id)}`;
+                window.location.href = `dashboard.html?project=${encodeURIComponent(project.project_id)}`;
             });
             container.appendChild(card);
         });
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const today = new Date().toISOString().split('T')[0];
             
             const newProject = {
-                id: idProject,
+                project_id: idProject,
                 name: projectName,
                 url: spreadsheetUrl,
                 description: description,
