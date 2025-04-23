@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     let supabase;
     
-    
     // Função para mostrar alertas
     function showAlert(message, type) {
         const alert = document.createElement('div');
@@ -80,90 +79,162 @@ document.addEventListener('DOMContentLoaded', async function() {
         return true;
     }
 
-    // Inicialização da página
-    async function initialize() {
-        try {
-            // Inicializar Supabase
-            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-            window.supabase = supabase;
+    // Processar dados de atividade para o gráfico
+    function processActivityData(dailyRequests) {
+        const dates = Object.keys(dailyRequests).sort();
+        const today = new Date();
+        
+        // Converter para array de objetos {date, count}
+        let data = dates.map(date => ({
+            date: new Date(date),
+            count: dailyRequests[date]
+        }));
+        
+        // Preencher dias faltantes com 0
+        if (data.length > 0) {
+            const startDate = new Date(data[0].date);
+            const filledData = [];
             
-            const projectId = getProjectIdFromUrl();
-        if (!projectId) {
-            showAlert('Projeto não especificado', 'danger');
-            setTimeout(() => window.location.href = 'home.html', 2000);
-            return;
-        }
-
-        const project = await loadProject(projectId);
-        if (!project) {
-            showAlert('Projeto não encontrado', 'danger');
-            setTimeout(() => window.location.href = 'home.html', 2000);
-            return;
-        }
-
-        // Atualizar UI com os dados do projeto
-        updateProjectUI(project);
-        initUsageChart(project);
-        setupTabs();
-        setupCopyButtons();
-        setupTimeframeButtons();
-        setupEventListeners();
+            for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                const existing = data.find(item => item.date.toISOString().split('T')[0] === dateStr);
+                filledData.push({
+                    date: new Date(d),
+                    count: existing ? existing.count : 0
+                });
+            }
             
-
-        } catch (error) {
-            showAlert('Erro ao inicializar aplicação: ' + error.message, 'danger');
-            console.error(error);
+            data = filledData;
         }
         
+        // Pegar os últimos 7, 30 e 90 dias
+        const last7Days = data.slice(-7).map(item => item.count);
+        const last30Days = data.slice(-30).map(item => item.count);
+        const last90Days = data.slice(-90).map(item => item.count);
+        
+        return {
+            '7d': last7Days.length > 0 ? last7Days : Array(7).fill(0),
+            '30d': last30Days.length > 0 ? last30Days : Array(30).fill(0),
+            '90d': last90Days.length > 0 ? last90Days : Array(90).fill(0)
+        };
     }
 
-    // Configurar listeners de eventos
-    function setupEventListeners() {
-        // Botão de voltar
-        document.getElementById('backButton').addEventListener('click', () => {
-            window.location.href = 'home.html';
-        });
+    // Gerar rótulos para o gráfico
+    function generateLabels(days) {
+        const labels = [];
+        const today = new Date();
+        
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            labels.push(formatChartDate(date));
+        }
+        
+        return labels;
+    }
 
-        // Botão de logout no footer
-        document.querySelector('footer button:nth-child(3)').addEventListener('click', async () => {
-            const { error } = await supabase.auth.signOut();
-            if (!error) {
-                window.location.href = 'login.html';
-            } else {
-                showAlert('Erro ao fazer logout', 'danger');
-            }
-        });
+    // Formatar data para o gráfico
+    function formatChartDate(date) {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
 
-        // Botão de salvar configurações
-        document.getElementById('saveSettings')?.addEventListener('click', async () => {
-            const projectId = getProjectIdFromUrl();
-            const project = await loadProject(projectId);
-            
-            if (project) {
-                project.name = document.getElementById('editGateName').value;
-                project.status = document.getElementById('editGateStatus').value;
+    // Inicializar gráfico de uso
+    function initUsageChart(project) {
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        const dailyRequests = project.daily_requests || {};
+        const activityData = processActivityData(dailyRequests);
+        
+        window.currentChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: generateLabels(7),
+                datasets: [{
+                    label: 'Requests',
+                    data: activityData['7d'],
+                    backgroundColor: 'rgba(58, 107, 255, 0.2)',
+                    borderColor: 'rgba(58, 107, 255, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: getChartOptions()
+        });
+    }
+
+    // Atualizar gráfico com base no período selecionado
+    async function updateChart(days) {
+        const projectId = getProjectIdFromUrl();
+        const project = await loadProject(projectId);
+        const dailyRequests = project?.daily_requests || {};
+        
+        const activityData = processActivityData(dailyRequests);
+        const daysKey = days + 'd';
+        
+        const chart = window.currentChart;
+        chart.data.labels = generateLabels(days);
+        chart.data.datasets[0].data = activityData[daysKey];
+        chart.update();
+    }
+
+    // Configurar abas
+    function setupTabs() {
+        const tabLinks = document.querySelectorAll('.tab-link');
+        
+        tabLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
                 
-                const success = await updateProject(project);
-                if (success) {
-                    showAlert('Configurações salvas com sucesso', 'success');
-                    updateProjectUI(project);
-                }
-            }
+                tabLinks.forEach(tab => {
+                    tab.classList.remove('border-blue-400', 'text-blue-400');
+                    tab.classList.add('border-transparent', 'text-gray-400');
+                });
+                
+                this.classList.add('border-blue-400', 'text-blue-400');
+                this.classList.remove('border-transparent', 'text-gray-400');
+                
+                const tabId = this.getAttribute('data-tab');
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabId).classList.add('active');
+            });
         });
+    }
 
-        // Botão de limpar cache
-        document.getElementById('clearCache')?.addEventListener('click', async () => {
-            const projectId = getProjectIdFromUrl();
-            const project = await loadProject(projectId);
-            
-            if (project) {
-                project.cache_size = 0;
-                const success = await updateProject(project);
-                if (success) {
-                    showAlert('Cache limpo com sucesso', 'success');
-                    document.getElementById('cacheSize').textContent = '0 KB';
+    // Configurar botões de copiar
+    function setupCopyButtons() {
+        document.querySelectorAll('.copy-button, .copy-snippet').forEach(button => {
+            button.addEventListener('click', function() {
+                const text = this.previousElementSibling?.textContent || 
+                             this.parentElement.querySelector('span, pre')?.textContent;
+                
+                if (text) {
+                    navigator.clipboard.writeText(text.trim()).then(() => {
+                        const icon = this.innerHTML;
+                        this.innerHTML = '<i class="bi bi-check2 text-green-400"></i>';
+                        setTimeout(() => {
+                            this.innerHTML = icon;
+                        }, 2000);
+                    });
                 }
-            }
+            });
+        });
+    }
+
+    // Configurar botões de período de tempo
+    function setupTimeframeButtons() {
+        document.querySelectorAll('.timeframe-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.timeframe-btn').forEach(b => {
+                    b.classList.remove('active', 'text-white');
+                    b.classList.add('text-gray-400');
+                });
+                this.classList.add('active', 'text-white');
+                this.classList.remove('text-gray-400');
+                
+                updateChart(parseInt(this.getAttribute('data-days')));
+            });
         });
     }
 
@@ -287,133 +358,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    function initUsageChart(project) {
-        const ctx = document.getElementById('usageChart').getContext('2d');
-        const activityData = project.activity_data || {
-            '7d': Array.from({length: 7}, () => Math.floor(Math.random() * 50) + 10),
-            '30d': Array.from({length: 30}, () => Math.floor(Math.random() * 100) + 20),
-            '90d': Array.from({length: 90}, () => Math.floor(Math.random() * 150) + 30)
-        };
-        
-        window.currentChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: Array.from({length: 7}, (_, i) => `Day ${i+1}`),
-                datasets: [{
-                    label: 'Requests',
-                    data: activityData['7d'],
-                    backgroundColor: 'rgba(58, 107, 255, 0.2)',
-                    borderColor: 'rgba(58, 107, 255, 1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: getChartOptions()
-        });
-    }
-
-    function setupTabs() {
-        const tabLinks = document.querySelectorAll('.tab-link');
-        
-        tabLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                tabLinks.forEach(tab => {
-                    tab.classList.remove('border-blue-400', 'text-blue-400');
-                    tab.classList.add('border-transparent', 'text-gray-400');
-                });
-                
-                this.classList.add('border-blue-400', 'text-blue-400');
-                this.classList.remove('border-transparent', 'text-gray-400');
-                
-                const tabId = this.getAttribute('data-tab');
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(tabId).classList.add('active');
-            });
-        });
-    }
-
-    function setupCopyButtons() {
-        document.querySelectorAll('.copy-button, .copy-snippet').forEach(button => {
-            button.addEventListener('click', function() {
-                const text = this.previousElementSibling?.textContent || 
-                             this.parentElement.querySelector('span, pre')?.textContent;
-                
-                if (text) {
-                    navigator.clipboard.writeText(text.trim()).then(() => {
-                        const icon = this.innerHTML;
-                        this.innerHTML = '<i class="bi bi-check2 text-green-400"></i>';
-                        setTimeout(() => {
-                            this.innerHTML = icon;
-                        }, 2000);
-                    });
-                }
-            });
-        });
-    }
-
-    function setupTimeframeButtons() {
-        document.querySelectorAll('.timeframe-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.timeframe-btn').forEach(b => {
-                    b.classList.remove('active', 'text-white');
-                    b.classList.add('text-gray-400');
-                });
-                this.classList.add('active', 'text-white');
-                this.classList.remove('text-gray-400');
-                
-                updateChart(this.getAttribute('data-days'));
-            });
-        });
-    }
-
-    async function updateChart(days) {
-        const projectId = getProjectIdFromUrl();
-        const project = await loadProject(projectId);
-        const activityData = project?.activity_data || {
-            '7d': Array.from({length: 7}, () => Math.floor(Math.random() * 50) + 10),
-            '30d': Array.from({length: 30}, () => Math.floor(Math.random() * 100) + 20),
-            '90d': Array.from({length: 90}, () => Math.floor(Math.random() * 150) + 30)
-        };
-        
-        const chart = window.currentChart;
-        const daysKey = days + 'd';
-        
-        chart.data.labels = Array.from({length: days}, (_, i) => `Day ${i+1}`);
-        chart.data.datasets[0].data = activityData[daysKey] || Array.from({length: days}, () => Math.floor(Math.random() * 100) + 20);
-        chart.update();
-    }
-
-    async function simulateRequest() {
-        const projectId = getProjectIdFromUrl();
-        const project = await loadProject(projectId);
-        
-        if (project) {
-            project.requests_today = (project.requests_today || 0) + 1;
-            project.total_requests = (project.total_requests || 0) + 1;
-            
-            const currentLevel = project.level || 1;
-            if (project.total_requests >= currentLevel * 100) {
-                project.level = currentLevel + 1;
-                showAlert(`Gate leveled up to level ${currentLevel + 1}!`, 'success');
-            }
-            
-            const today = new Date().toISOString().split('T')[0];
-            project.last_request_date = today;
-            project.daily_requests = project.daily_requests || {};
-            project.daily_requests[today] = (project.daily_requests[today] || 0) + 1;
-            
-            const success = await updateProject(project);
-            if (success) {
-                updateProjectUI(project);
-            }
-        }
-    }
-
     function formatDate(dateString) {
         try {
             const options = { year: 'numeric', month: 'short', day: 'numeric' };
@@ -452,6 +396,91 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             }
         };
+    }
+
+    // Configurar listeners de eventos
+    function setupEventListeners() {
+        // Botão de voltar
+        document.getElementById('backButton').addEventListener('click', () => {
+            window.location.href = 'home.html';
+        });
+
+        // Botão de logout no footer
+        document.querySelector('footer button:nth-child(3)').addEventListener('click', async () => {
+            const { error } = await supabase.auth.signOut();
+            if (!error) {
+                window.location.href = 'login.html';
+            } else {
+                showAlert('Erro ao fazer logout', 'danger');
+            }
+        });
+
+        // Botão de salvar configurações
+        document.getElementById('saveSettings')?.addEventListener('click', async () => {
+            const projectId = getProjectIdFromUrl();
+            const project = await loadProject(projectId);
+            
+            if (project) {
+                project.name = document.getElementById('editGateName').value;
+                project.status = document.getElementById('editGateStatus').value;
+                
+                const success = await updateProject(project);
+                if (success) {
+                    showAlert('Configurações salvas com sucesso', 'success');
+                    updateProjectUI(project);
+                }
+            }
+        });
+
+        // Botão de limpar cache
+        document.getElementById('clearCache')?.addEventListener('click', async () => {
+            const projectId = getProjectIdFromUrl();
+            const project = await loadProject(projectId);
+            
+            if (project) {
+                project.cache_size = 0;
+                const success = await updateProject(project);
+                if (success) {
+                    showAlert('Cache limpo com sucesso', 'success');
+                    document.getElementById('cacheSize').textContent = '0 KB';
+                }
+            }
+        });
+    }
+
+    // Inicialização da página
+    async function initialize() {
+        try {
+            // Inicializar Supabase
+            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            window.supabase = supabase;
+            
+            const projectId = getProjectIdFromUrl();
+            if (!projectId) {
+                showAlert('Projeto não especificado', 'danger');
+                setTimeout(() => window.location.href = 'home.html', 2000);
+                return;
+            }
+
+            const project = await loadProject(projectId);
+            if (!project) {
+                showAlert('Projeto não encontrado', 'danger');
+                setTimeout(() => window.location.href = 'home.html', 2000);
+                return;
+            }
+
+            // Atualizar UI com os dados do projeto
+            updateProjectUI(project);
+            initUsageChart(project);
+            setupTabs();
+            setupCopyButtons();
+            setupTimeframeButtons();
+            setupEventListeners();
+
+        } catch (error) {
+            showAlert('Erro ao inicializar aplicação: ' + error.message, 'danger');
+            console.error(error);
+        }
     }
 
     // Iniciar a aplicação
