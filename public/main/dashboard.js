@@ -5,25 +5,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     let supabase;
     let currentProject;
 
-    // Função para mostrar alertas
+    // Funções básicas
     function showAlert(message, type = 'info') {
         const alert = document.createElement('div');
-        alert.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg text-white font-semibold z-50 ${
-            type === 'danger' ? 'bg-red-600' : 'bg-blue-600'
-        }`;
+        alert.className = `alert ${type}`;
         alert.textContent = message;
         document.body.appendChild(alert);
         setTimeout(() => alert.remove(), 3000);
     }
 
-    // Carregar projeto do Supabase
+    async function getCurrentUser() {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        return user;
+    }
+
+    function getProjectIdFromUrl() {
+        return new URLSearchParams(window.location.search).get('project');
+    }
+
+    // Carregar projeto
     async function loadProject() {
-        const projectId = new URLSearchParams(window.location.search).get('project');
+        const projectId = getProjectIdFromUrl();
         if (!projectId) throw new Error('Projeto não especificado');
 
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) throw userError;
-
+        const user = await getCurrentUser();
         const { data, error } = await supabase
             .from('user_projects')
             .select('*')
@@ -35,9 +41,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         return data;
     }
 
-    // Inicializar gráfico com pontos
+    // Gráfico otimizado
     async function initChart() {
-        if (!currentProject || !document.getElementById('usageChart')) return;
+        if (!currentProject) return;
         
         const ctx = document.getElementById('usageChart').getContext('2d');
         const projectDate = new Date(currentProject.created_at);
@@ -52,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             current.setDate(current.getDate() + 1);
         }
         
-        // Processar dados para o gráfico
+        // Processar dados
         const labels = dates.map(date => 
             date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         );
@@ -62,12 +68,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             return currentProject.daily_requests?.[dateStr] || 0;
         });
 
-        // Destruir gráfico anterior se existir
+        // Se já existir um gráfico, destruir antes de criar novo
         if (window.currentChart) {
             window.currentChart.destroy();
         }
 
-        // Criar novo gráfico com pontos visíveis
         window.currentChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -79,100 +84,55 @@ document.addEventListener('DOMContentLoaded', async function() {
                     borderColor: 'rgba(58, 107, 255, 1)',
                     borderWidth: 2,
                     tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: 'rgba(58, 107, 255, 1)',
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
-                    pointBorderWidth: 2
+                    fill: true
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.parsed.y} requests`;
-                            }
-                        }
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
-                    x: { 
-                        grid: { display: false },
-                        ticks: {
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 10
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 50,
-                            callback: function(value) {
-                                return value % 100 === 0 ? value : '';
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    }
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true }
                 }
             }
         });
     }
 
-    // Atualizar UI conforme screenshot
+    // Atualizar UI
     function updateUI() {
         if (!currentProject) return;
         
-        // Endpoint API
-        const endpointElement = document.getElementById('apiEndpoint');
-        if (endpointElement) {
-            endpointElement.textContent = `https://shadowngate-1.onrender.com/api/${currentProject.project_id}`;
-            endpointElement.parentElement.querySelector('p').textContent = 'Access this URL for JSON response';
-        }
-        
-        // Link da planilha
-        const spreadsheetElement = document.getElementById('spreadsheetUrl');
-        if (spreadsheetElement && currentProject.url) {
-            spreadsheetElement.textContent = currentProject.url;
-            spreadsheetElement.href = currentProject.url;
-        }
+        // Informações básicas
+        document.getElementById('gateName').textContent = currentProject.name || 'Sem nome';
+        document.getElementById('gateId').textContent = currentProject.project_id;
+        document.getElementById('gateCreated').textContent = 
+            new Date(currentProject.created_at).toLocaleDateString();
         
         // Nível e progresso
         document.getElementById('gateLevel').textContent = currentProject.level || 1;
+        document.getElementById('requestsToNextLevel').textContent = 
+            Math.max(0, 100 - (currentProject.total_requests % 100));
+        
+        // Endpoint
+        document.getElementById('apiEndpoint').textContent = 
+            `${window.location.origin}/api/${currentProject.project_id}`;
     }
 
     // Configurar eventos
     function setupEventListeners() {
+        // Botões de timeframe
+        document.querySelectorAll('.timeframe-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Lógica simplificada - pode ser expandida
+                initChart();
+            });
+        });
+
         // Botão de voltar
-        const backButton = document.getElementById('backButton');
-        if (backButton) {
-            backButton.addEventListener('click', () => {
-                window.location.href = 'home.html';
-            });
-        }
-        
-        // Botão de copiar endpoint
-        const copyButton = document.querySelector('.copy-button');
-        if (copyButton) {
-            copyButton.addEventListener('click', () => {
-                const text = document.getElementById('apiEndpoint')?.textContent;
-                if (text) {
-                    navigator.clipboard.writeText(text.trim());
-                    const icon = copyButton.innerHTML;
-                    copyButton.innerHTML = '<i class="bi bi-check2"></i>';
-                    setTimeout(() => {
-                        copyButton.innerHTML = icon;
-                    }, 2000);
-                }
-            });
-        }
+        document.getElementById('backButton').addEventListener('click', () => {
+            window.location.href = 'home.html';
+        });
     }
 
     // Inicialização
@@ -182,7 +142,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             currentProject = await loadProject();
             
             updateUI();
-            await initChart();
+            initChart();
             setupEventListeners();
 
         } catch (error) {
