@@ -3,11 +3,11 @@ const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// Função para verificar autenticação
-async function checkAuth() {
+// Função para verificar autenticação e redirecionar se não estiver autenticado
+async function checkAuthAndRedirect(redirectUrl = 'login.html') {
     const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-        console.error('Error getting session:', error);
+    if (error || !session) {
+        window.location.href = redirectUrl;
         return null;
     }
     return session;
@@ -44,4 +44,4 @@ function showMessage(type, message, duration = 5000) {
     }, duration);
 }
 
-export { supabase, checkAuth, logout, showMessage };
+export { supabase, checkAuthAndRedirect, logout, showMessage };
