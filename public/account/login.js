@@ -1,8 +1,14 @@
+// Configuração do Supabase (no topo do arquivo)
+const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
 document.addEventListener('DOMContentLoaded', async function() {
-  // Verifica se já está autenticado
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    window.location.href = '../main/home.html';
+  // Verificação inicial de autenticação
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (user && !authError) {
+    window.location.replace('../main/home.html');
+    return;
   }
 
   // Icon configuration
@@ -27,6 +33,18 @@ document.addEventListener('DOMContentLoaded', async function() {
       security: 'bi-shield-check'
     }
   };
+
+  // Set all icons from the configuration
+  document.getElementById('logo-icon')?.classList.add(icons.logo);
+  document.getElementById('email-icon')?.classList.add(icons.form.email);
+  document.getElementById('password-icon')?.classList.add(icons.form.password);
+  document.getElementById('toggle-password-icon')?.classList.add(icons.form.togglePassword.show);
+  document.getElementById('submit-icon')?.classList.add(icons.form.submit);
+  document.getElementById('google-icon')?.classList.add(icons.social.google);
+  document.getElementById('github-icon')?.classList.add(icons.social.github);
+  document.getElementById('facebook-icon')?.classList.add(icons.social.facebook);
+  document.getElementById('back-icon')?.classList.add(icons.footer.back);
+  document.getElementById('security-icon')?.classList.add(icons.footer.security);
 
   // Initialize particles.js if the element exists
   if (document.getElementById('particles-js')) {
@@ -162,8 +180,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
 
-      const email = document.getElementById('email')?.value;
-      const password = document.getElementById('password')?.value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
       const rememberMe = document.getElementById('remember-me')?.checked;
 
       if (!email || !password) {
@@ -172,15 +190,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
 
       try {
-        // Initialize Supabase
-        const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        window.supabase = supabase;
-
         // Set session duration based on "Remember me"
         if (rememberMe) {
-          // 30 days expiration for "Remember me"
           await supabase.auth.setSession({
             expires_in: 60 * 60 * 24 * 30 // 30 days in seconds
           });
@@ -196,20 +207,12 @@ document.addEventListener('DOMContentLoaded', async function() {
           return;
         }
 
-        // Show success message and redirect
-        showAlert('Login successful! Redirecting...', 'success');
+        // Redirecionamento imediato após login bem-sucedido
+        window.location.replace('../main/home.html');
         
-        // Store user data in localStorage if needed
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Redirect to dashboard or home page after 2 seconds
-        setTimeout(() => {
-          window.location.href = '../main/home.html';
-        }, 2000);
-
       } catch (err) {
         showAlert('Unexpected error: ' + err.message, 'danger');
-        console.error(err);
+        console.error('Login error:', err);
       }
     });
   }
@@ -223,10 +226,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       
       if (email) {
         try {
-          const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
-          const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
-          const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-          
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: window.location.origin + '/reset-password.html'
           });
