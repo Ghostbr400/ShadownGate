@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const { data, error } = await supabase
             .from('user_projects')
             .select('*')
-            .eq('id', projectId)
+            .eq('project_id', projectId)
             .eq('user_id', user.id)
             .single();
 
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const { error } = await supabase
             .from('user_projects')
             .update(project)
-            .eq('id', project.id)
+            .eq('project_id', project.id)
             .eq('user_id', user.id);
 
         if (error) {
@@ -171,13 +171,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     function updateProjectUI(project) {
         // Informações básicas
         document.querySelectorAll('#snippetProjectId, #snippetProjectId2').forEach(el => {
-            el.textContent = project.id || 'N/A';
+            el.textContent = project.project_id || 'N/A';
         });
 
         document.getElementById('gateName').textContent = project.name || 'Sem nome';
-        document.getElementById('gateId').textContent = project.id || 'N/A';
+        document.getElementById('gateId').textContent = project.project_id || 'N/A';
         document.getElementById('gateCreated').textContent = project.created_at ? formatDate(project.created_at) : 'Data desconhecida';
-        document.getElementById('apiEndpoint').textContent = `${window.location.origin}/api/${project.id || 'N/A'}`;
+        document.getElementById('apiEndpoint').textContent = `${window.location.origin}/api/${project.project_id || 'N/A'}`;
         document.getElementById('spreadsheetUrl').textContent = project.url || 'Sem URL';
         document.getElementById('dailyRequests').textContent = project.requests_today || 0;
         document.getElementById('gateLevel').textContent = project.level || 1;
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         if (!endpointCard) {
             endpointCard = document.createElement('div');
-            endpointCard.id = 'animeEndpointCard';
+            endpointCard.project_id = 'animeEndpointCard';
             endpointCard.className = 'gate-card p-4';
             container.appendChild(endpointCard);
         }
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <i class="bi bi-code-slash text-blue-400 mr-2"></i> ANIME API ENDPOINT
             </h3>
             <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
-                <span id="animeEndpoint" class="text-xs text-white truncate font-mono">${window.location.origin}/${project.id}/animes</span>
+                <span id="animeEndpoint" class="text-xs text-white truncate font-mono">${window.location.origin}/${project.project_id}/animes</span>
                 <button class="copy-button p-1 text-gray-400 hover:text-blue-400 transition">
                     <i class="bi bi-clipboard"></i>
                 </button>
