@@ -56,12 +56,11 @@ const requestTracker = {
 // Middleware de Verificação de Projeto
 async function verifyProject(req, res, next) {
   const projectId = req.params.id;
-  const authToken = req.headers.authorization?.split(' ')[1]; // Bearer token
+  const authToken = req.headers.authorization?.split(' ')[1];
   
   try {
     console.log(`[VERIFY] Verifying project: ${projectId}`);
     
-    // Verificar se o projeto existe e pertence ao usuário
     const { data: project, error } = await supabase
       .from('user_projects')
       .select('*')
@@ -75,7 +74,6 @@ async function verifyProject(req, res, next) {
       });
     }
     
-    // Se houver token, verificar se o usuário é o dono
     if (authToken) {
       const { data: { user }, error: userError } = await supabase.auth.getUser(authToken);
       
@@ -99,13 +97,12 @@ async function verifyProject(req, res, next) {
   }
 }
 
-// Função para Incrementar Contagem (agora usando user_projects)
+// Função para Incrementar Contagem
 async function incrementRequestCount(projectId, endpointType) {
   try {
     const today = new Date().toISOString().split('T')[0];
     console.log(`[INCREMENT] Starting for ${projectId}`);
 
-    // 1. Busca o projeto
     const { data: project, error: fetchError } = await supabase
       .from('user_projects')
       .select('*')
@@ -116,7 +113,6 @@ async function incrementRequestCount(projectId, endpointType) {
       throw new Error('Project not found');
     }
 
-    // 2. Prepara dados para atualização
     const updateData = {
       requests_today: project.requests_today + 1,
       total_requests: project.total_requests + 1,
@@ -126,15 +122,12 @@ async function incrementRequestCount(projectId, endpointType) {
       last_endpoint: endpointType
     };
 
-    // Atualiza contador diário
     updateData.daily_requests[today] = (updateData.daily_requests[today] || 0) + 1;
 
-    // 3. Atualiza nível
     if (updateData.total_requests >= (project.level * 100)) {
       updateData.level = project.level + 1;
     }
 
-    // 4. Executa update
     const { error: updateError } = await supabase
       .from('user_projects')
       .update(updateData)
@@ -142,7 +135,6 @@ async function incrementRequestCount(projectId, endpointType) {
 
     if (updateError) throw updateError;
     
-    // 5. Registra no log de requisições (opcional)
     const { error: logError } = await supabase
       .from('request_logs')
       .insert({
@@ -173,7 +165,6 @@ app.get('/:id/filmes', verifyProject, async (req, res) => {
     const projectId = req.params.id;
     console.log(`[FILMES] Request from ${projectId}`);
 
-    // Contabiliza requisição
     await incrementRequestCount(projectId, 'filmes');
     requestTracker.track(projectId, 'filmes');
 
@@ -216,11 +207,9 @@ app.get('/:id/animes', verifyProject, async (req, res) => {
     const projectId = req.params.id;
     console.log(`[ANIMES] Request from ${projectId}`);
 
-    // Contabiliza requisição
     const incrementResult = await incrementRequestCount(projectId, 'animes');
     requestTracker.track(projectId, 'animes');
 
-    // Verificação adicional
     const { data: projectData } = await supabase
       .from('user_projects')
       .select('*')
@@ -247,7 +236,7 @@ app.get('/:id/animes', verifyProject, async (req, res) => {
   }
 });
 
-// Gerador de Dados de Animes (mantido igual)
+// Gerador de Dados de Animes
 function generateAnimeData(projectId) {
   const baseAnimes = [
     { id: 1, title: "Attack on Titan", episodes: 75, year: 2013 },
@@ -266,7 +255,7 @@ function generateAnimeData(projectId) {
   }));
 }
 
-// Endpoint de Stream (mantido igual)
+// Endpoint de Stream
 app.get('/:id/stream/:streamId', verifyProject, async (req, res) => {
   try {
     const streamId = req.params.streamId;
@@ -297,7 +286,7 @@ app.get('/:id/stream/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint de Ícone (mantido igual)
+// Endpoint de Ícone
 app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
   try {
     const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
@@ -317,7 +306,7 @@ app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Rota de Teste (atualizada para user_projects)
+// Rota de Teste
 app.get('/test/:id', async (req, res) => {
   try {
     await incrementRequestCount(req.params.id, 'test');
@@ -339,12 +328,12 @@ app.get('/test/:id', async (req, res) => {
   }
 });
 
-// Rota Frontend (mantida igual)
+// Rota Frontend
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Inicia Servidor (mantido igual)
+// Inicia Servidor
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
