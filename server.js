@@ -2,17 +2,16 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Supabase Configuration
+// Configuração do Supabase
 const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Xtream API Configuration
+// Configuração Xtream API
 const XTREAM_CONFIG = {
   host: 'sigcine1.space',
   port: 80,
@@ -20,265 +19,318 @@ const XTREAM_CONFIG = {
   password: '355591139'
 };
 
-// Constants
-const REQUEST_LIMIT_PER_DAY = 1000;
-const LEVEL_UP_THRESHOLD = 100; // Requests needed to level up
-
-// Ensure default icon exists
-const defaultIconPath = path.join(__dirname, 'public', 'default-icon.jpg');
-if (!fs.existsSync(defaultIconPath)) {
-  fs.writeFileSync(defaultIconPath, fs.readFileSync(path.join(__dirname, 'public', 'default-icon-sample.jpg')));
-}
-
-// Middleware
+// Middlewares
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Project Verification Middleware
+// Middleware CORS para Sketchware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
+// Sistema de Monitoramento de Requisições
+const requestTracker = {
+  requests: new Map(),
+  
+  track: function(projectId, endpoint) {
+    const now = Date.now();
+    const key = `${projectId}_${endpoint}`;
+    
+    if (!this.requests.has(key)) {
+      this.requests.set(key, []);
+    }
+    
+    this.requests.get(key).push(now);
+    console.log(`[TRACK] ${key} - ${now}`);
+  },
+  
+  getCount: function(projectId, endpoint) {
+    const key = `${projectId}_${endpoint}`;
+    return this.requests.has(key) ? this.requests.get(key).length : 0;
+  }
+};
+
+// Middleware de Verificação de Projeto
 async function verifyProject(req, res, next) {
-    const projectId = req.params.id;
+  const projectId = req.params.id;
+  
+  try {
+    console.log(`[VERIFY] Verifying project: ${projectId}`);
     
-    try {
-        // Check if project exists and is active
-        const { data: project, error } = await supabase
-            .from('user_projects')
-            .select('*')
-            .eq('id', projectId)
-            .eq('status', 'active')
-            .single();
+    const { data: project, error } = await supabase
+      .from('project_tokens')
+      .select('*')
+      .eq('project_id', projectId)
+      .single();
 
-        if (error || !project) {
-            return res.status(404).json({ 
-                status: 'error',
-                error: 'Project not found or inactive'
-            });
-        }
-
-        // Check daily request limit
-        if (project.requests_today >= REQUEST_LIMIT_PER_DAY) {
-            return res.status(429).json({
-                status: 'error',
-                error: 'Daily request limit reached'
-            });
-        }
-
-        req.project = project;
-        next();
-    } catch (err) {
-        console.error('Project verification error:', err);
-        res.status(500).json({ 
-            status: 'error',
-            error: 'Internal server error'
-        });
+    if (error || !project) {
+      console.error('[VERIFY ERROR] Project not found:', projectId);
+      return res.status(404).json({ 
+        status: 'error',
+        error: 'Project not found'
+      });
     }
+
+    req.project = project;
+    next();
+  } catch (err) {
+    console.error('[VERIFY ERROR]', err);
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Internal server error'
+    });
+  }
 }
 
-// Generate activity data
-function generateActivityData() {
-    return {
-        '7d': Array.from({length: 7}, () => Math.floor(Math.random() * 50) + 10),
-        '30d': Array.from({length: 30}, () => Math.floor(Math.random() * 100) + 20),
-        '90d': Array.from({length: 90}, () => Math.floor(Math.random() * 150) + 30)
-    };
-}
-
-// Increment request count and handle level ups
+// Função para Incrementar Contagem
 async function incrementRequestCount(projectId, endpointType) {
-    try {
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Get current project data
-        const { data: project } = await supabase
-            .from('user_projects')
-            .select('*')
-            .eq('id', projectId)
-            .single();
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    console.log(`[INCREMENT] Starting for ${projectId}`);
 
-        if (!project) return;
+    // 1. Busca ou cria registro
+    const { data: currentData, error: fetchError } = await supabase
+      .from('project_requests')
+      .select('*')
+      .eq('project_id', projectId)
+      .single();
 
-        const updateData = {
-            requests_today: (project.requests_today || 0) + 1,
-            total_requests: (project.total_requests || 0) + 1,
-            last_request_date: today,
-            daily_requests: {
-                ...(project.daily_requests || {}),
-                [today]: ((project.daily_requests || {})[today] || 0) + 1
-            },
-            updated_at: new Date().toISOString()
-        };
-
-        // Check for level up
-        if (updateData.total_requests >= (project.level || 1) * LEVEL_UP_THRESHOLD) {
-            updateData.level = (project.level || 1) + 1;
-            updateData.activity_data = generateActivityData();
-        }
-
-        await supabase
-            .from('user_projects')
-            .update(updateData)
-            .eq('id', projectId);
-
-    } catch (error) {
-        console.error('Request count error:', error);
+    // Registro não existe - cria novo
+    if (fetchError || !currentData) {
+      console.log('[INCREMENT] Creating new record');
+      const { error: createError } = await supabase
+        .from('project_requests')
+        .insert({
+          project_id: projectId,
+          requests_today: 1,
+          total_requests: 1,
+          last_request_date: today,
+          daily_requests: { [today]: 1 },
+          level: 1,
+          last_endpoint: endpointType
+        });
+      
+      if (createError) throw createError;
+      return { status: 'created' };
     }
-}
 
-// Movies Endpoint
-app.get('/:id/filmes', verifyProject, async (req, res) => {
-    try {
-        const projectId = req.params.id;
-        await incrementRequestCount(projectId, 'filmes');
+    // 2. Atualiza contadores
+    const updateData = {
+      requests_today: currentData.requests_today + 1,
+      total_requests: currentData.total_requests + 1,
+      last_request_date: today,
+      daily_requests: { ...currentData.daily_requests },
+      updated_at: new Date().toISOString(),
+      last_endpoint: endpointType
+    };
 
-        const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`;
-        const apiResponse = await fetch(apiUrl);
-        
-        if (!apiResponse.ok) {
-            throw new Error('Failed to fetch movies data');
-        }
+    // Atualiza contador diário
+    updateData.daily_requests[today] = (updateData.daily_requests[today] || 0) + 1;
 
-        const filmesData = await apiResponse.json();
-
-        const filmesComLinks = filmesData.map(filme => ({
-            ...filme,
-            player: `${req.protocol}://${req.get('host')}/${projectId}/stream/${filme.stream_id}.mp4`,
-            stream_icon: `${req.protocol}://${req.get('host')}/${projectId}/icon/${filme.stream_id}`
-        }));
-
-        res.json({
-            status: 'success',
-            projectId,
-            timestamp: new Date().toISOString(),
-            data: filmesComLinks
-        });
-
-    } catch (err) {
-        console.error('Movies endpoint error:', err);
-        res.status(500).json({ 
-            status: 'error',
-            error: 'Internal server error'
-        });
+    // 3. Atualiza nível
+    if (updateData.total_requests >= (currentData.level * 100)) {
+      updateData.level = currentData.level + 1;
     }
-});
 
-// Stream Endpoint
-app.get('/:id/stream/:streamId', verifyProject, async (req, res) => {
-    try {
-        const streamId = req.params.streamId;
-        const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
-        
-        const streamResponse = await fetch(realStreamUrl);
-        
-        if (!streamResponse.ok) {
-            return res.status(404).json({ 
-                status: 'error',
-                error: 'Stream not found'
-            });
-        }
+    // 4. Executa update
+    const { error: updateError } = await supabase
+      .from('project_requests')
+      .update(updateData)
+      .eq('project_id', projectId);
 
-        res.set({
-            'Content-Type': 'video/mp4',
-            'Cache-Control': 'no-store'
-        });
-
-        streamResponse.body.pipe(res);
-
-    } catch (err) {
-        console.error('Stream error:', err);
-        res.status(500).json({ 
-            status: 'error',
-            error: 'Stream error'
-        });
-    }
-});
-
-// Icon Endpoint (Robust Version)
-app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
-    try {
-        const streamId = req.params.streamId;
-        const iconExtensions = ['.jpg', '.png', ''];
-        const basePaths = [
-            `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}`,
-            `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/images/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}`
-        ];
-
-        let iconFound = false;
-        
-        // Try multiple URL combinations
-        for (const basePath of basePaths) {
-            for (const ext of iconExtensions) {
-                const iconUrl = `${basePath}/${streamId}${ext}`;
-                try {
-                    const iconResponse = await fetch(iconUrl);
-                    if (iconResponse.ok) {
-                        res.set({
-                            'Content-Type': iconResponse.headers.get('content-type') || 'image/jpeg',
-                            'Cache-Control': 'public, max-age=86400'
-                        });
-                        iconResponse.body.pipe(res);
-                        iconFound = true;
-                        return;
-                    }
-                } catch (e) {
-                    console.log(`Tried ${iconUrl} - not found`);
-                }
-            }
-        }
-
-        // If no icon found, return default
-        res.sendFile(defaultIconPath);
-
-    } catch (err) {
-        console.error('Icon handling error:', err);
-        res.sendFile(defaultIconPath);
-    }
-});
-
-// Anime Endpoint
-app.get('/:id/animes', verifyProject, async (req, res) => {
-    try {
-        const projectId = req.params.id;
-        await incrementRequestCount(projectId, 'animes');
-        
-        res.json({
-            status: 'success',
-            projectId,
-            timestamp: new Date().toISOString(),
-            data: generateAnimeData(projectId)
-        });
-    } catch (err) {
-        console.error('Anime endpoint error:', err);
-        res.status(500).json({ 
-            status: 'error',
-            error: 'Internal server error'
-        });
-    }
-});
-
-// Helper function to generate anime data
-function generateAnimeData(projectId) {
-    const baseAnimes = [
-        { id: 1, title: "Attack on Titan", episodes: 75, year: 2013 },
-        { id: 2, title: "Demon Slayer", episodes: 44, year: 2019 },
-        { id: 3, title: "Jujutsu Kaisen", episodes: 24, year: 2020 }
-    ];
-
-    const hash = projectId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    if (updateError) throw updateError;
     
-    return baseAnimes.map(anime => ({
-        ...anime,
-        episodes: anime.episodes + (hash % 5),
-        year: anime.year + (hash % 3),
-        rating: (3.5 + (hash % 5 * 0.3)).toFixed(1),
-        projectSpecific: `custom-${projectId.slice(0, 3)}-${anime.id}`
-    }));
+    console.log(`[INCREMENT] Success for ${projectId}`);
+    return { status: 'updated' };
+    
+  } catch (error) {
+    console.error('[INCREMENT ERROR]', error);
+    throw error;
+  }
 }
 
-// Frontend Route
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Endpoint de Filmes
+app.get('/:id/filmes', verifyProject, async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    console.log(`[FILMES] Request from ${projectId}`);
+
+    // Contabiliza requisição
+    await incrementRequestCount(projectId, 'filmes');
+    requestTracker.track(projectId, 'filmes');
+
+    const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`;
+    const apiResponse = await fetch(apiUrl);
+    
+    if (!apiResponse.ok) {
+      throw new Error('Failed to fetch movies data');
+    }
+
+    const filmesData = await apiResponse.json();
+
+    const filmesComLinks = filmesData.map(filme => ({
+      ...filme,
+      player: `${req.protocol}://${req.get('host')}/${projectId}/stream/${filme.stream_id}.mp4`,
+      stream_icon: `${req.protocol}://${req.get('host')}/${projectId}/icon/${filme.stream_id}`
+    }));
+
+    res.json({
+      status: 'success',
+      projectId,
+      timestamp: new Date().toISOString(),
+      requestCount: requestTracker.getCount(projectId, 'filmes'),
+      data: filmesComLinks
+    });
+
+  } catch (err) {
+    console.error('[FILMES ERROR]', err);
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Internal server error',
+      details: err.message
+    });
+  }
 });
 
-// Start Server
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+// Endpoint de Animes
+app.get('/:id/animes', verifyProject, async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    console.log(`[ANIMES] Request from ${projectId}`);
+
+    // Contabiliza requisição
+    const incrementResult = await incrementRequestCount(projectId, 'animes');
+    requestTracker.track(projectId, 'animes');
+
+    // Verificação adicional
+    const { data: projectData } = await supabase
+      .from('project_requests')
+      .select('*')
+      .eq('project_id', projectId)
+      .single();
+
+    res.json({
+      status: 'success',
+      projectId,
+      timestamp: new Date().toISOString(),
+      incrementResult,
+      requestCount: requestTracker.getCount(projectId, 'animes'),
+      dbData: projectData,
+      data: generateAnimeData(projectId)
+    });
+
+  } catch (err) {
+    console.error('[ANIMES ERROR]', err);
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Internal server error',
+      details: err.message
+    });
+  }
 });
+
+// Gerador de Dados de Animes
+function generateAnimeData(projectId) {
+  const baseAnimes = [
+    { id: 1, title: "Attack on Titan", episodes: 75, year: 2013 },
+    { id: 2, title: "Demon Slayer", episodes: 44, year: 2019 },
+    { id: 3, title: "Jujutsu Kaisen", episodes: 24, year: 2020 }
+  ];
+
+  const hash = projectId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  return baseAnimes.map(anime => ({
+    ...anime,
+    episodes: anime.episodes + (hash % 5),
+    year: anime.year + (hash % 3),
+    rating: (3.5 + (hash % 5 * 0.3)).toFixed(1),
+    projectSpecific: `custom-${projectId.slice(0, 3)}-${anime.id}`
+  }));
+}
+
+// Endpoint de Stream
+app.get('/:id/stream/:streamId', verifyProject, async (req, res) => {
+  try {
+    const streamId = req.params.streamId;
+    const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
+    
+    const streamResponse = await fetch(realStreamUrl);
+    
+    if (!streamResponse.ok) {
+      return res.status(404).json({ 
+        status: 'error',
+        error: 'Stream not found'
+      });
+    }
+
+    res.set({
+      'Content-Type': 'video/mp4',
+      'Cache-Control': 'no-store'
+    });
+
+    streamResponse.body.pipe(res);
+
+  } catch (err) {
+    console.error('[STREAM ERROR]', err);
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Stream error'
+    });
+  }
+});
+
+// Endpoint de Ícone
+app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
+  try {
+    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+      <rect width="100" height="100" fill="#ddd"/>
+      <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
+    </svg>`;
+    
+    res.set({
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=86400'
+    });
+    
+    res.send(svgIcon);
+  } catch (err) {
+    console.error('[ICON ERROR]', err);
+    res.status(500).send('Icon error');
+  }
+});
+
+// Rota de Teste
+app.get('/test/:id', async (req, res) => {
+  try {
+    await incrementRequestCount(req.params.id, 'test');
+    const { data } = await supabase
+      .from('project_requests')
+      .select('*')
+      .eq('project_id', req.params.id)
+      .single();
+      
+    res.json({
+      status: 'success',
+      data: data || { error: 'No data found' }
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      error: err.message
+    });
+  }
+});
+
+// Rota Frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Inicia Servidor
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+      
