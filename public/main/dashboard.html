@@ -40,11 +40,56 @@
         .copy-button:hover {
             color: #3A6BFF !important;
         }
+
+        .menu {
+            display: none;
+            position: absolute;
+            right: 20px;
+            top: 50px;
+            background: #1E293B;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .menu-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .menu-item:hover {
+            background: #3A6BFF;
+        }
+
+        .level-bar-container {
+            background: #334155;
+            border-radius: 0.5rem;
+            height: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .level-bar {
+            background: #3A6BFF;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .project-name {
+            background: #1E293B;
+            padding: 10px;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            display: inline-block;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body class="min-h-screen">
     <!-- Cabeçalho -->
-    <header class="bg-gradient-to-r from-gray-900 to-blue-900 p-3 shadow-lg">
+    <header class="bg-gradient-to-r from-gray-900 to-blue-900 p-4 shadow-lg">
         <div class="flex justify-between items-center">
             <div class="flex items-center">
                 <button id="backButton" class="text-white mr-3 hover:text-blue-400 transition">
@@ -54,27 +99,35 @@
                 <span class="ml-2 font-bold text-xl tracking-wider text-white glow-text">SHADOW GATE</span>
             </div>
             <div>
-                <i class="bi bi-list text-2xl text-white"></i>
+                <span id="menuToggle" class="text-white text-2xl hover:text-blue-400 cursor-pointer">•••</span>
+                <div id="menu" class="menu">
+                    <div class="menu-item" onclick="showAbout()">Sobre</div>
+                    <div class="menu-item" onclick="exit()">Sair</div>
+                </div>
             </div>
         </div>
     </header>
 
     <!-- Conteúdo Principal -->
-    <div class="container mx-auto px-4 py-8 pb-20">
+    <div class="container mx-auto px-4 py-8">
         <header class="mb-8">
             <h1 class="text-2xl font-bold text-white tracking-wide">
                 <i class="bi bi-code-slash text-blue-400 mr-2"></i>
                 ENDPOINTS DA API
             </h1>
             <p class="text-gray-400">Lista de endpoints disponíveis para integração</p>
+            <div class="project-name text-center">
+                <strong>Shadow Gate API</strong>
+            </div>
         </header>
 
         <main>
             <div class="gate-card p-6 mb-8">
                 <h2 class="text-xl font-semibold mb-4 text-blue-300">Informações Gerais</h2>
-                <p class="mb-2">URL Base: <span class="font-mono bg-gray-800 px-2 py-1 rounded">https://api.shadowgate.com/v1</span></p>
-                <p class="mb-4">Todas as requisições devem incluir o cabeçalho de autenticação API Key.</p>
-                <div class="flex space-x-2">
+                
+                <p class="mb-2">URL Base: <span class="font-mono bg-gray-800 px-2 py-1 rounded text-sm">https://api.shadowgate.com/v1</span></p>
+                <p class="mb-4 text-sm">Todas as requisições devem incluir o cabeçalho de autenticação API Key.</p>
+                <div class="flex flex-wrap gap-2 mb-4">
                     <span id="gateId" class="bg-gray-800 text-xs px-3 py-1 rounded-full border border-gray-700 text-blue-300">
                         <i class="bi bi-key-fill mr-1"></i> GATE ID: SG-4269-BT
                     </span>
@@ -82,30 +135,27 @@
                         <i class="bi bi-check-circle-fill mr-1"></i> ACTIVE
                     </span>
                 </div>
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold text-blue-300">Total de Requisições: <span id="totalRequests" class="text-yellow-300">147,320</span></h3>
+                    <h3 class="text-lg font-semibold text-blue-300">Level: <span id="level" class="text-yellow-300">1</span></h3>
+                    <div class="level-bar-container">
+                        <div id="levelBar" class="level-bar" style="width: 20%;"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="space-y-6">
                 <!-- Endpoint 1 -->
                 <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
-                            <span class="font-mono">/projectid/animes</span>
+                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
+                        <div class="flex items-center mb-2 sm:mb-0">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
+                            <span class="font-mono text-sm sm:text-base">/projectid/animes</span>
                         </div>
-                        <span class="text-sm text-gray-300">Listar todos os animes</span>
                     </div>
-                    <div class="px-6 py-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <p class="mb-0">Retorna uma lista com todos os animes disponíveis.</p>
-                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
-                                <span class="text-blue-300 font-semibold">58,742</span>
-                                <span class="text-xs text-gray-400 ml-1">requests</span>
-                            </div>
-                        </div>
-                        <div class="bg-gray-800 h-2 rounded-full mb-3">
-                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 92%"></div>
-                        </div>
-                        <div class="flex items-center justify-between mt-3">
+                    <div class="px-4 sm:px-6 py-3">
+                        <p class="text-sm mb-3">Retorna uma lista com todos os animes disponíveis.</p>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
                             <p class="text-xs text-gray-400">
                                 <i class="bi bi-shield-check text-green-400 mr-1"></i> 
                                 Não requer autenticação
@@ -119,29 +169,19 @@
 
                 <!-- Endpoint 2 -->
                 <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
-                            <span class="font-mono">/projectid/animes/{id}</span>
+                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
+                        <div class="flex items-center mb-2 sm:mb-0">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
+                            <span class="font-mono text-sm sm:text-base">/projectid/animes/{id}</span>
                         </div>
-                        <span class="text-sm text-gray-300">Obter anime específico</span>
                     </div>
-                    <div class="px-6 py-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <p class="mb-0">Retorna detalhes de um anime específico.</p>
-                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
-                                <span class="text-blue-300 font-semibold">26,189</span>
-                                <span class="text-xs text-gray-400 ml-1">requests</span>
-                            </div>
-                        </div>
-                        <div class="bg-gray-800 h-2 rounded-full mb-3">
-                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 63%"></div>
-                        </div>
-                        <p class="text-sm text-gray-400 mb-2"><strong>Parâmetros de Caminho:</strong></p>
-                        <ul class="list-disc list-inside text-sm text-gray-400 pl-4">
+                    <div class="px-4 sm:px-6 py-3">
+                        <p class="text-sm mb-3">Retorna detalhes de um anime específico.</p>
+                        <p class="text-xs text-gray-400 mb-1"><strong>Parâmetros de Caminho:</strong></p>
+                        <ul class="list-disc list-inside text-xs text-gray-400 pl-2 mb-3">
                             <li><span class="font-mono">id</span>: ID do anime (obrigatório)</li>
                         </ul>
-                        <div class="flex items-center justify-between mt-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
                             <p class="text-xs text-gray-400">
                                 <i class="bi bi-shield-check text-green-400 mr-1"></i> 
                                 Não requer autenticação
@@ -155,25 +195,15 @@
 
                 <!-- Endpoint 3 -->
                 <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
-                            <span class="font-mono">/projectid/filmes</span>
+                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
+                        <div class="flex items-center mb-2 sm:mb-0">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
+                            <span class="font-mono text-sm sm:text-base">/projectid/filmes</span>
                         </div>
-                        <span class="text-sm text-gray-300">Listar todos os filmes</span>
                     </div>
-                    <div class="px-6 py-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <p class="mb-0">Retorna uma lista com todos os filmes disponíveis.</p>
-                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
-                                <span class="text-blue-300 font-semibold">42,516</span>
-                                <span class="text-xs text-gray-400 ml-1">requests</span>
-                            </div>
-                        </div>
-                        <div class="bg-gray-800 h-2 rounded-full mb-3">
-                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 78%"></div>
-                        </div>
-                        <div class="flex items-center justify-between mt-3">
+                    <div class="px-4 sm:px-6 py-3">
+                        <p class="text-sm mb-3">Retorna uma lista com todos os filmes disponíveis.</p>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
                             <p class="text-xs text-gray-400">
                                 <i class="bi bi-shield-check text-green-400 mr-1"></i> 
                                 Não requer autenticação
@@ -187,29 +217,19 @@
 
                 <!-- Endpoint 4 -->
                 <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
-                            <span class="font-mono">/projectid/filmes/{id}</span>
+                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
+                        <div class="flex items-center mb-2 sm:mb-0">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
+                            <span class="font-mono text-sm sm:text-base">/projectid/filmes/{id}</span>
                         </div>
-                        <span class="text-sm text-gray-300">Obter filme específico</span>
                     </div>
-                    <div class="px-6 py-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <p class="mb-0">Retorna detalhes de um filme específico.</p>
-                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
-                                <span class="text-blue-300 font-semibold">19,873</span>
-                                <span class="text-xs text-gray-400 ml-1">requests</span>
-                            </div>
-                        </div>
-                        <div class="bg-gray-800 h-2 rounded-full mb-3">
-                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 45%"></div>
-                        </div>
-                        <p class="text-sm text-gray-400 mb-2"><strong>Parâmetros de Caminho:</strong></p>
-                        <ul class="list-disc list-inside text-sm text-gray-400 pl-4">
+                    <div class="px-4 sm:px-6 py-3">
+                        <p class="text-sm mb-3">Retorna detalhes de um filme específico.</p>
+                        <p class="text-xs text-gray-400 mb-1"><strong>Parâmetros de Caminho:</strong></p>
+                        <ul class="list-disc list-inside text-xs text-gray-400 pl-2 mb-3">
                             <li><span class="font-mono">id</span>: ID do filme (obrigatório)</li>
                         </ul>
-                        <div class="flex items-center justify-between mt-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
                             <p class="text-xs text-gray-400">
                                 <i class="bi bi-shield-check text-green-400 mr-1"></i> 
                                 Não requer autenticação
@@ -222,42 +242,181 @@
                 </div>
             </div>
         </main>
-
-        <!-- Exemplos de Uso -->
-        <div class="mt-10">
-            <h2 class="text-xl font-semibold mb-4 text-blue-300">Exemplos de Uso</h2>
-            <div class="gate-card p-4">
-                <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                    <i class="bi bi-braces text-blue-400 mr-2"></i> FETCH API EXAMPLE
-                </h3>
-                <div class="relative">
-                    <pre class="bg-gray-800 p-4 rounded-lg text-xs text-gray-300 font-mono overflow-x-auto">
-// JavaScript Fetch Example
-fetch('https://api.shadowgate.com/v1/projectid/animes')
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));</pre>
-                    <button class="copy-snippet absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-400 transition">
-                        <i class="bi bi-clipboard"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Rodapé -->
     <footer class="fixed bottom-0 w-full bg-gray-900 border-t border-gray-800 shadow-lg">
         <div class="flex justify-around py-3">
-            <button class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-800 hover:bg-blue-900 hover:text-white transition">
-                <i class="bi bi-arrow-counterclockwise text-xl text-white"></i>
-            </button>
-            <button class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-800 hover:bg-blue-900 text-blue-400 transition">
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-800 hover:bg-blue-900 hover:text-white transition">
+                <i class="bi bi-arrow-left text-xl text-white"></i>
+            </div>
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-800 hover:bg-blue-900 text-blue-400 transition">
                 <i class="bi bi-gate text-xl"></i>
-            </button>
-            <button class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-800 hover:bg-blue-900 hover:text-white transition">
+            </div>
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-800 hover:bg-blue-900 hover:text-white transition">
                 <i class="bi bi-box-arrow-left text-xl text-white"></i>
-            </button>
+            </div>
         </div>
     </footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        document.getElementById('menuToggle').addEventListener('click', function() {
+            const menu = document.getElementById('menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        function showAbout() {
+            alert('Sobre: Shadow Gate API é uma interface para integração com serviços de animes e filmes.');
+        }
+
+        function exit() {
+            alert('Saindo...');
+            // Adicione lógica para sair ou redirecionar
+        }
+    </script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+    const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
+    
+    let supabase;
+    let currentProject;
+
+    // Funções básicas
+    function showAlert(message, type = 'info') {
+        const alert = document.createElement('div');
+        alert.className = `alert ${type}`;
+        alert.textContent = message;
+        document.body.appendChild(alert);
+        setTimeout(() => alert.remove(), 3000);
+    }
+
+    async function getCurrentUser() {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        return user;
+    }
+
+    function getProjectIdFromUrl() {
+        return new URLSearchParams(window.location.search).get('project');
+    }
+
+    // Carregar projeto
+    async function loadProject() {
+        const projectId = getProjectIdFromUrl();
+        if (!projectId) throw new Error('Projeto não especificado');
+
+        const user = await getCurrentUser();
+        const { data, error } = await supabase
+            .from('user_projects')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('user_id', user.id)
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    // Atualizar UI com todos os elementos
+    function updateUI() {
+        if (!currentProject) return;
+        
+        // Nome do projeto
+        const projectNameElement = document.querySelector('.project-name strong');
+        if (projectNameElement) {
+            projectNameElement.textContent = currentProject.name || 'Shadow Gate API';
+        }
+        
+        // Informações do gate
+        document.getElementById('gateId').textContent = `GATE ID: ${currentProject.project_id}`;
+        
+        // Estatísticas
+        document.getElementById('totalRequests').textContent = currentProject.total_requests?.toLocaleString() || '0';
+        document.getElementById('level').textContent = currentProject.level || '1';
+        
+        // Barra de progresso
+        const progress = (currentProject.total_requests % 100) || 0;
+        document.getElementById('levelBar').style.width = `${progress}%`;
+        
+        // Configurar botões de copiar URL
+        setupCopyButtons();
+    }
+
+    // Configurar botões de copiar
+    function setupCopyButtons() {
+        document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const endpoint = this.closest('.gate-card').querySelector('span.font-mono').textContent;
+                const fullUrl = `${window.location.origin}/api/${currentProject.project_id}${endpoint}`;
+                
+                navigator.clipboard.writeText(fullUrl).then(() => {
+                    showAlert('URL copiada com sucesso!', 'success');
+                }).catch(err => {
+                    showAlert('Falha ao copiar URL', 'danger');
+                });
+            });
+        });
+    }
+
+    // Configurar eventos
+    function setupEventListeners() {
+        // Botão de voltar
+        document.getElementById('backButton').addEventListener('click', () => {
+            window.location.href = 'home.html';
+        });
+
+        // Menu toggle
+        document.getElementById('menuToggle').addEventListener('click', function() {
+            const menu = document.getElementById('menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Funções do menu
+        function showAbout() {
+            alert('Sobre: Shadow Gate API\nVersão 1.0\nProjeto: ' + (currentProject?.name || 'N/A'));
+        }
+
+        function exit() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = 'login.html';
+            });
+        }
+
+        // Itens do menu
+        document.querySelector('.menu-item:nth-child(1)').addEventListener('click', showAbout);
+        document.querySelector('.menu-item:nth-child(2)').addEventListener('click', exit);
+        
+        // Rodapé interativo
+        document.querySelector('footer div:nth-child(1)').addEventListener('click', () => {
+            window.location.href = 'home.html';
+        });
+        document.querySelector('footer div:nth-child(2)').addEventListener('click', () => {
+            window.location.href = 'dashboard.html';
+        });
+        document.querySelector('footer div:nth-child(3)').addEventListener('click', exit);
+    }
+
+    // Inicialização
+    async function initialize() {
+        try {
+            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            currentProject = await loadProject();
+            
+            updateUI();
+            setupEventListeners();
+
+        } catch (error) {
+            showAlert(error.message, 'danger');
+            console.error(error);
+            setTimeout(() => window.location.href = 'home.html', 2000);
+        }
+    }
+
+    initialize();
+});
+    </script>
 </body>
 </html>
