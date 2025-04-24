@@ -132,10 +132,6 @@
             opacity: 1;
         }
         
-        .video-info {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
-        }
-        
         #video-player {
             width: 100vw;
             height: 100vh;
@@ -144,6 +140,15 @@
         
         #video-controls {
             background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+        }
+
+        #video-title {
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.7) 100%);
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 0 auto;
         }
     </style>
 </head>
@@ -176,15 +181,8 @@
         </div>
         
         <!-- Video Info (Top) -->
-        <div class="video-info absolute top-0 left-0 right-0 p-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div class="flex flex-col items-start">
-                <h3 id="video-title" class="text-xl sm:text-2xl md:text-3xl font-bold mb-2 drop-shadow-lg">Shadow Gate</h3>
-                <div class="flex items-center space-x-3 text-xs sm:text-sm text-white/90">
-                    <span class="bg-cinema-red px-1.5 py-0.5 rounded">HD</span>
-                    <span><i class="fas fa-closed-captioning mr-1 opacity-80"></i> Legendas</span>
-                    <span><i class="fas fa-volume-up mr-1 opacity-80"></i> Português</span>
-                </div>
-            </div>
+        <div class="absolute top-0 left-0 right-0 p-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-center">
+            <h3 id="video-title" class="text-xl sm:text-2xl md:text-3xl font-bold drop-shadow-lg">Carregando...</h3>
         </div>
         
         <!-- Controls (Bottom) -->
@@ -233,7 +231,7 @@
         </div>
     </div>
 
-    <script>
+     <script>
         // DOM Elements
         const videoPlayer = document.getElementById('video-player');
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -261,7 +259,7 @@
         // Variables
         let isPlaying = false;
         let hideControlsTimeout;
-        let currentVideoTitle = 'Shadow Gate';
+        let currentVideoTitle = 'Filme';
 
         // Initialize the player
         function initPlayer() {
@@ -274,15 +272,39 @@
                 // Stream from direct ID
                 const videoSource = `https://${window.location.host}/api/${projectId}/stream-direct/${streamId}.mp4`;
                 videoPlayer.src = videoSource;
-                currentVideoTitle = `Stream ${streamId}`;
+                
+                // Buscar título do filme pelo streamId
+                fetch(`/api/${projectId}/get-movie-title/${streamId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.title) {
+                            currentVideoTitle = data.title;
+                            videoTitle.textContent = currentVideoTitle;
+                        } else {
+                            videoTitle.textContent = 'Filme';
+                        }
+                    })
+                    .catch(() => {
+                        videoTitle.textContent = 'Filme';
+                    });
             } else if (tmdbId) {
-                // Stream from TMDB ID (need to map to stream ID)
-                fetch(`/api/${projectId}/tmdb-to-stream/${tmdbId}`)
+                // Stream from TMDB ID
+                fetch(`https://api.themoviedb.org/3/movie/${tmdbId}?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR`)
+                    .then(response => response.json())
+                    .then(movieData => {
+                        if (movieData.title) {
+                            currentVideoTitle = movieData.title;
+                            videoTitle.textContent = currentVideoTitle;
+                        } else {
+                            videoTitle.textContent = 'Filme';
+                        }
+                        
+                        return fetch(`/api/${projectId}/tmdb-to-stream/${tmdbId}`);
+                    })
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
                             videoPlayer.src = `https://${window.location.host}/api/${projectId}/stream-direct/${data.streamId}.mp4`;
-                            currentVideoTitle = `Filme ID: ${tmdbId}`;
                         } else {
                             showError('Não foi possível encontrar o stream para este filme');
                         }
@@ -296,7 +318,6 @@
                 return;
             }
 
-            videoTitle.textContent = currentVideoTitle;
             setupPlayerEvents();
         }
 
