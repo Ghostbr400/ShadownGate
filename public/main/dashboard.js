@@ -117,6 +117,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Endpoint
         document.getElementById('apiEndpoint').textContent = 
             `${window.location.origin}/api/${currentProject.project_id}`;
+        
+        // Atualizar snippets de código
+        document.querySelectorAll('#snippetProjectId, #snippetProjectId2').forEach(el => {
+            el.textContent = currentProject.project_id;
+        });
     }
 
     // Configurar eventos
@@ -132,6 +137,38 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Botão de voltar
         document.getElementById('backButton').addEventListener('click', () => {
             window.location.href = 'home.html';
+        });
+
+        // Botões de copiar
+        document.querySelectorAll('.copy-button, .copy-snippet').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const textToCopy = e.target.closest('button').previousElementSibling.textContent;
+                navigator.clipboard.writeText(textToCopy);
+                showAlert('Copied to clipboard!', 'success');
+            });
+        });
+
+        // Navegação por abas
+        document.querySelectorAll('.tab-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabId = link.getAttribute('data-tab');
+                
+                // Atualizar aba ativa
+                document.querySelectorAll('.tab-link').forEach(l => {
+                    l.classList.remove('border-blue-400', 'text-blue-400');
+                    l.classList.add('border-transparent', 'text-gray-400');
+                });
+                
+                link.classList.add('border-blue-400', 'text-blue-400');
+                link.classList.remove('border-transparent', 'text-gray-400');
+                
+                // Mostrar conteúdo da aba
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabId).classList.add('active');
+            });
         });
     }
 
