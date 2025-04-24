@@ -118,7 +118,6 @@ function formatMovieData(movie) {
   };
 }
 
-// Endpoint para listar filmes
 app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -145,7 +144,6 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint para busca de filmes
 app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -221,7 +219,6 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint para redirecionar para o player
 app.get('/api/:id/stream/:streamId', verifyProject, async (req, res) => {
   try {
     const streamId = req.params.streamId;
@@ -232,7 +229,6 @@ app.get('/api/:id/stream/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint para stream direto (usado pelo player)
 app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
   try {
     const streamId = req.params.streamId;
@@ -250,7 +246,6 @@ app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint para mapear TMDB ID para stream ID
 app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
   try {
     const tmdbId = req.params.tmdbId;
@@ -273,14 +268,11 @@ app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
   }
 });
 
-// Função auxiliar para mapear TMDB ID para stream ID
 async function findStreamIdByTmdbId(tmdbId) {
   // Implementação básica - em produção, consulte uma tabela de mapeamento
-  // Aqui estamos apenas retornando o mesmo ID como exemplo
   return tmdbId;
 }
 
-// Endpoint para ícones
 app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
   try {
     const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
@@ -294,7 +286,6 @@ app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Endpoint para animes
 app.get('/api/:id/animes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -335,7 +326,6 @@ function generateAnimeData(projectId) {
   }));
 }
 
-// Endpoint de teste
 app.get('/api/test/:id', async (req, res) => {
   try {
     await incrementRequestCount(req.params.id, 'test');
@@ -350,12 +340,10 @@ app.get('/api/test/:id', async (req, res) => {
   }
 });
 
-// Rota para o player
 app.get('/player.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'player.html'));
 });
 
-// Rota padrão
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
