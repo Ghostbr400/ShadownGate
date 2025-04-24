@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinema Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'cinema-red': '#E50914',
+                        'cinema-dark': '#0D0D0F',
+                        'cinema-darker': '#070709',
+                        'cinema-light': '#FFFFFF',
+                        'cinema-gray': '#1F1F23',
+                        'cinema-text': '#B8B8B8',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    boxShadow: {
+                        'cinema': '0 10px 30px -10px rgba(0, 0, 0, 0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #070709;
+        }
+        
+        .film-grain {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .ambient-light {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
+            pointer-events: none;
+            z-index: 4;
+            opacity: 0.2;
+        }
+        
+        .cinema-progress {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .cinema-progress::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #E50914;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .cinema-progress:hover::-webkit-slider-thumb {
+            opacity: 1;
+        }
+        
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #E50914;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        
+        .buffer-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        
+        .control-btn {
+            transition: all 0.2s;
+            opacity: 0.8;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+        
+        .video-info {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+        }
+        
+        #video-player {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+        }
+        
+        #video-controls {
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+        }
+    </style>
+</head>
+<body class="bg-cinema-darker text-white">
+    <!-- Video Container -->
+    <div class="relative w-full h-full bg-black group overflow-hidden">
+        <!-- Video Element -->
+        <video id="video-player"></video>
+        
+        <!-- Vignette Effect -->
+        <div class="vignette"></div>
+        
+        <!-- Film Grain Texture -->
+        <div class="film-grain"></div>
+        
+        <!-- Ambient Light Effect -->
+        <div class="ambient-light"></div>
+        
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-30">
+            <div class="border-3 border-white/20 border-t-cinema-red rounded-full w-10 h-10 animate-spin mb-4"></div>
+            <p class="text-white/90 font-medium tracking-wider">Carregando...</p>
+        </div>
+        
+        <!-- Big Play Button (Center) -->
+        <div id="big-play-button" class="absolute inset-0 flex items-center justify-center z-20 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+            <button class="w-20 h-20 rounded-full bg-cinema-red/80 backdrop-blur-sm flex items-center justify-center shadow-xl transform transition-all duration-300 hover:scale-110 hover:bg-cinema-red">
+                <i class="fas fa-play text-white text-2xl pl-1"></i>
+            </button>
+        </div>
+        
+        <!-- Video Info (Top) -->
+        <div class="video-info absolute top-0 left-0 right-0 p-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div class="flex flex-col items-start">
+                <h3 id="video-title" class="text-xl sm:text-2xl md:text-3xl font-bold mb-2 drop-shadow-lg">Shadow Gate</h3>
+                <div class="flex items-center space-x-3 text-xs sm:text-sm text-white/90">
+                    <span class="bg-cinema-red px-1.5 py-0.5 rounded">HD</span>
+                    <span><i class="fas fa-closed-captioning mr-1 opacity-80"></i> Legendas</span>
+                    <span><i class="fas fa-volume-up mr-1 opacity-80"></i> Português</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Controls (Bottom) -->
+        <div id="video-controls" class="absolute bottom-0 left-0 right-0 pt-16 pb-6 px-6 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <!-- Progress Bar Container -->
+            <div class="relative w-full mb-4">
+                <div class="relative h-5">
+                    <!-- Progress Container -->
+                    <div class="relative w-full h-5 flex items-center group cursor-pointer" id="progress-container">
+                        <input type="range" id="progress-input" 
+                            class="cinema-progress absolute z-10 m-0 w-full cursor-pointer" 
+                            min="0" max="100" value="0" step="0.1">
+                        <div id="buffer-bar" class="buffer-bar" style="width: 0%;"></div>
+                        <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls Row -->
+            <div class="flex items-center justify-between">
+                <!-- Left Controls -->
+                <div class="flex items-center space-x-4 sm:space-x-5">
+                    <!-- Play/Pause Button -->
+                    <button id="play-pause-btn" class="control-btn focus:outline-none">
+                        <i id="play-icon" class="fas fa-play text-xl sm:text-2xl"></i>
+                        <i id="pause-icon" class="fas fa-pause text-xl sm:text-2xl hidden"></i>
+                    </button>
+                    
+                    <!-- Time Display -->
+                    <div class="text-sm flex items-center space-x-1">
+                        <span id="current-time" class="tabular-nums font-medium">00:00</span>
+                        <span class="text-white/50">/</span>
+                        <span id="total-time" class="tabular-nums text-white/50">00:00</span>
+                    </div>
+                </div>
+                
+                <!-- Right Controls -->
+                <div class="flex items-center space-x-4">
+                    <!-- Fullscreen Button -->
+                    <button id="fullscreen-btn" class="control-btn focus:outline-none">
+                        <i id="fullscreen-icon" class="fas fa-expand text-sm sm:text-base"></i>
+                        <i id="fullscreen-exit-icon" class="fas fa-compress text-sm sm:text-base hidden"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const videoPlayer = document.getElementById('video-player');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const bigPlayButton = document.getElementById('big-play-button');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        const progressInput = document.getElementById('progress-input');
+        const progressBar = document.getElementById('progress-bar');
+        const bufferBar = document.getElementById('buffer-bar');
+        const currentTimeEl = document.getElementById('current-time');
+        const totalTimeEl = document.getElementById('total-time');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const fullscreenIcon = document.getElementById('fullscreen-icon');
+        const fullscreenExitIcon = document.getElementById('fullscreen-exit-icon');
+        const videoControls = document.getElementById('video-controls');
+        const videoTitle = document.getElementById('video-title');
+
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('projectId');
+        const streamId = urlParams.get('streamId');
+        const tmdbId = urlParams.get('tmdbId');
+
+        // Variables
+        let isPlaying = false;
+        let hideControlsTimeout;
+        let currentVideoTitle = 'Shadow Gate';
+
+        // Initialize the player
+        function initPlayer() {
+            if (!projectId) {
+                showError('Project ID não especificado');
+                return;
+            }
+
+            if (streamId) {
+                // Stream from direct ID
+                const videoSource = `https://${window.location.host}/api/${projectId}/stream-direct/${streamId}.mp4`;
+                videoPlayer.src = videoSource;
+                currentVideoTitle = `Stream ${streamId}`;
+            } else if (tmdbId) {
+                // Stream from TMDB ID (need to map to stream ID)
+                fetch(`/api/${projectId}/tmdb-to-stream/${tmdbId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            videoPlayer.src = `https://${window.location.host}/api/${projectId}/stream-direct/${data.streamId}.mp4`;
+                            currentVideoTitle = `Filme ID: ${tmdbId}`;
+                        } else {
+                            showError('Não foi possível encontrar o stream para este filme');
+                        }
+                    })
+                    .catch(err => {
+                        showError('Erro ao buscar informações do filme');
+                        console.error(err);
+                    });
+            } else {
+                showError('Nenhum ID de stream ou TMDB especificado');
+                return;
+            }
+
+            videoTitle.textContent = currentVideoTitle;
+            setupPlayerEvents();
+        }
+
+        // Show error message
+        function showError(message) {
+            loadingOverlay.innerHTML = `
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-cinema-red text-4xl mb-4"></i>
+                    <p class="text-white/90 font-medium tracking-wider">${message}</p>
+                    <button onclick="window.location.href='/'" class="mt-4 px-4 py-2 bg-cinema-red rounded hover:bg-red-700">
+                        Voltar
+                    </button>
+                </div>
+            `;
+            loadingOverlay.style.display = 'flex';
+        }
+
+        // Setup player event listeners
+        function setupPlayerEvents() {
+            videoPlayer.addEventListener('loadedmetadata', function() {
+                loadingOverlay.style.display = 'none';
+                totalTimeEl.textContent = formatTime(videoPlayer.duration);
+                bigPlayButton.style.opacity = '1';
+                
+                // Try to enter fullscreen automatically
+                if (videoPlayer.readyState > 0) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log('Fullscreen error:', err);
+                    });
+                }
+            });
+
+            videoPlayer.addEventListener('playing', function() {
+                loadingOverlay.style.display = 'none';
+            });
+
+            videoPlayer.addEventListener('waiting', function() {
+                loadingOverlay.style.display = 'flex';
+            });
+
+            videoPlayer.addEventListener('error', function() {
+                showError('Erro ao carregar o vídeo');
+            });
+        }
+
+        // Play/Pause functionality
+        function togglePlayPause() {
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+                bigPlayButton.style.opacity = '0';
+                isPlaying = true;
+                scheduleHideControls();
+            } else {
+                videoPlayer.pause();
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                bigPlayButton.style.opacity = '1';
+                isPlaying = false;
+                clearTimeout(hideControlsTimeout);
+                videoControls.style.opacity = '1';
+            }
+        }
+
+        // Schedule hiding of controls
+        function scheduleHideControls() {
+            clearTimeout(hideControlsTimeout);
+            if (isPlaying) {
+                hideControlsTimeout = setTimeout(() => {
+                    videoControls.style.opacity = '0';
+                }, 3000);
+            }
+        }
+
+        // Event listeners for play/pause
+        bigPlayButton.addEventListener('click', togglePlayPause);
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        videoPlayer.addEventListener('click', togglePlayPause);
+
+        // Progress bar update
+        videoPlayer.addEventListener('timeupdate', function() {
+            const percent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+            progressBar.style.width = `${percent}%`;
+            progressInput.value = percent;
+            currentTimeEl.textContent = formatTime(videoPlayer.currentTime);
+        });
+
+        // Buffer bar update
+        videoPlayer.addEventListener('progress', function() {
+            if (videoPlayer.buffered.length > 0) {
+                const bufferedEnd = videoPlayer.buffered.end(videoPlayer.buffered.length - 1);
+                const duration = videoPlayer.duration;
+                const bufferedPercent = (bufferedEnd / duration) * 100;
+                bufferBar.style.width = `${bufferedPercent}%`;
+            }
+        });
+
+        // Progress input change
+        progressInput.addEventListener('input', function() {
+            const seekTime = (progressInput.value / 100) * videoPlayer.duration;
+            videoPlayer.currentTime = seekTime;
+            progressBar.style.width = `${progressInput.value}%`;
+        });
+
+        // Format time (MM:SS)
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            seconds = Math.floor(seconds % 60);
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        // Fullscreen toggle
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        function toggleFullscreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+                fullscreenIcon.classList.remove('hidden');
+                fullscreenExitIcon.classList.add('hidden');
+            } else {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error('Fullscreen error:', err);
+                });
+                fullscreenIcon.classList.add('hidden');
+                fullscreenExitIcon.classList.remove('hidden');
+            }
+        }
+
+        // Update fullscreen button when fullscreen state changes
+        document.addEventListener('fullscreenchange', function() {
+            if (document.fullscreenElement) {
+                fullscreenIcon.classList.add('hidden');
+                fullscreenExitIcon.classList.remove('hidden');
+            } else {
+                fullscreenIcon.classList.remove('hidden');
+                fullscreenExitIcon.classList.add('hidden');
+            }
+        });
+
+        // Show controls on mouse movement
+        videoPlayer.addEventListener('mousemove', function() {
+            videoControls.style.opacity = '1';
+            scheduleHideControls();
+        });
+
+        // Prevent hiding controls when mouse is over them
+        videoControls.addEventListener('mouseenter', function() {
+            clearTimeout(hideControlsTimeout);
+        });
+
+        videoControls.addEventListener('mouseleave', function() {
+            scheduleHideControls();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === ' ' || e.key === 'k') {
+                e.preventDefault();
+                togglePlayPause();
+            } else if (e.key === 'f') {
+                e.preventDefault();
+                toggleFullscreen();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+            }
+        });
+
+        // End of video
+        videoPlayer.addEventListener('ended', function() {
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+            bigPlayButton.style.opacity = '1';
+            isPlaying = false;
+            playIcon.classList.remove('fa-play');
+            playIcon.classList.add('fa-redo');
+            
+            setTimeout(() => {
+                playIcon.classList.remove('fa-redo');
+                playIcon.classList.add('fa-play');
+            }, 3000);
+        });
+
+        // Initialize the player when DOM is loaded
+        initPlayer();
+    </script>
+</body>
+</html>
