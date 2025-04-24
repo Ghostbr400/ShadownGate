@@ -118,6 +118,28 @@ function formatMovieData(movie) {
   };
 }
 
+// Nova rota para buscar título do filme pelo streamId
+app.get('/api/:id/get-movie-title/:streamId', verifyProject, async (req, res) => {
+    try {
+        const streamId = req.params.streamId;
+        const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_info&vod_id=${streamId}`;
+        const apiResponse = await fetch(apiUrl);
+        
+        if (!apiResponse.ok) {
+            return res.json({ status: 'error', error: 'Failed to fetch movie info' });
+        }
+        
+        const movieInfo = await apiResponse.json();
+        res.json({
+            status: 'success',
+            title: movieInfo.name || movieInfo.title || 'Filme',
+            streamId
+        });
+    } catch (err) {
+        res.json({ status: 'error', error: err.message });
+    }
+});
+
 app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
