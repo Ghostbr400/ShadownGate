@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shadow Gate - Dashboard</title>
+    <title>Shadow Gate - Endpoints</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -32,14 +31,6 @@
             width: 100%;
             height: 4px;
             background: linear-gradient(90deg, #3A6BFF, #7C3AED);
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
         }
         
         .glow-text {
@@ -69,229 +60,190 @@
     </header>
 
     <!-- Conteúdo Principal -->
-    <main class="p-4 pb-20">
-        <!-- Cabeçalho do Projeto -->
-        <div class="mb-6">
-            <h1 id="projectTitle" class="text-2xl font-bold text-white tracking-wide">
-                <i class="bi bi-shield-lock text-blue-400 mr-2"></i>
-                PORTAL: <span id="gateName" class="text-blue-300">LOADING...</span>
+    <div class="container mx-auto px-4 py-8 pb-20">
+        <header class="mb-8">
+            <h1 class="text-2xl font-bold text-white tracking-wide">
+                <i class="bi bi-code-slash text-blue-400 mr-2"></i>
+                ENDPOINTS DA API
             </h1>
-            <p id="projectInfo" class="text-xs text-gray-400 tracking-wider mt-1">
-                <i class="bi bi-key text-purple-400 mr-1"></i>
-                GATE ID: <span id="gateId" class="font-mono text-white">••••••••••</span>
-                <span class="mx-2 text-gray-600">|</span>
-                <i class="bi bi-calendar text-blue-300 mr-1"></i>
-                CREATED: <span id="gateCreated" class="text-white">••/••/••••</span>
-            </p>
-        </div>
+            <p class="text-gray-400">Lista de endpoints disponíveis para integração</p>
+        </header>
 
-        <!-- Navegação por Abas -->
-        <div class="border-b border-gray-700 mb-4">
-            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
-                <li class="mr-2">
-                    <a href="#" class="tab-link inline-flex items-center p-2 border-b-2 border-blue-400 rounded-t-lg text-blue-400" data-tab="details">
-                        <i class="bi bi-speedometer2 mr-1"></i> DASHBOARD
-                    </a>
-                </li>
-                <li class="mr-2">
-                    <a href="#" class="tab-link inline-flex items-center p-2 border-b-2 border-transparent rounded-t-lg text-gray-400 hover:text-white" data-tab="settings">
-                        <i class="bi bi-sliders mr-1"></i> SETTINGS
-                    </a>
-                </li>
-                <li class="mr-2">
-                    <a href="#" class="tab-link inline-flex items-center p-2 border-b-2 border-transparent rounded-t-lg text-gray-400 hover:text-white" data-tab="cache">
-                        <i class="bi bi-lightning-charge mr-1"></i> CACHE
-                    </a>
-                </li>
-                <li class="mr-2">
-                    <a href="#" class="tab-link inline-flex items-center p-2 border-b-2 border-transparent rounded-t-lg text-gray-400 hover:text-white" data-tab="form-snippets">
-                        <i class="bi bi-code-slash mr-1"></i> CODE
-                    </a>
-                </li>
-            </ul>
-        </div>
+        <main>
+            <div class="gate-card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-blue-300">Informações Gerais</h2>
+                <p class="mb-2">URL Base: <span class="font-mono bg-gray-800 px-2 py-1 rounded">https://api.shadowgate.com/v1</span></p>
+                <p class="mb-4">Todas as requisições devem incluir o cabeçalho de autenticação API Key.</p>
+                <div class="flex space-x-2">
+                    <span id="gateId" class="bg-gray-800 text-xs px-3 py-1 rounded-full border border-gray-700 text-blue-300">
+                        <i class="bi bi-key-fill mr-1"></i> GATE ID: SG-4269-BT
+                    </span>
+                    <span class="bg-gray-800 text-xs px-3 py-1 rounded-full border border-gray-700 text-green-300">
+                        <i class="bi bi-check-circle-fill mr-1"></i> ACTIVE
+                    </span>
+                </div>
+            </div>
 
-        <!-- Conteúdo das Abas -->
-        <div id="tabContents">
-            <!-- Dashboard -->
-            <div id="details" class="tab-content active">
-                <!-- Cartões de Status -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="gate-card p-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="text-xs font-medium text-gray-400 mb-1 tracking-wider">GATE STATUS</h3>
-                                <p id="gateStatus" class="text-xl font-bold text-green-400 flex items-center">
-                                    <i class="bi bi-check-circle-fill mr-2"></i> ACTIVE
-                                </p>
-                                <button onclick="simulateRequest()" class="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded mt-2 hover:bg-blue-800">
-                                    Simulate Request
-                                </button>
-                            </div>
-                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">ONLINE</span>
+            <div class="space-y-6">
+                <!-- Endpoint 1 -->
+                <div class="gate-card overflow-hidden">
+                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
+                            <span class="font-mono">/projectid/animes</span>
                         </div>
+                        <span class="text-sm text-gray-300">Listar todos os animes</span>
                     </div>
-                    
-                    <div class="gate-card p-4">
-                        <h3 class="text-xs font-medium text-gray-400 mb-1 tracking-wider">REQUESTS (24H)</h3>
-                        <p id="dailyRequests" class="text-xl font-bold text-blue-400">0</p>
-                        <div class="h-1 bg-gray-700 mt-2 rounded-full">
-                            <div class="h-1 bg-blue-500 rounded-full" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="gate-card p-4">
-                        <h3 class="text-xs font-medium text-gray-400 mb-1 tracking-wider">GATE LEVEL</h3>
-                        <div class="flex items-end justify-between">
-                            <p id="gateLevel" class="text-xl font-bold text-white">1</p>
-                            <div class="text-right">
-                                <p class="text-xs text-gray-400">TO NEXT LEVEL</p>
-                                <p id="requestsToNextLevel" class="text-sm font-bold text-blue-400">100</p>
+                    <div class="px-6 py-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="mb-0">Retorna uma lista com todos os animes disponíveis.</p>
+                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
+                                <span class="text-blue-300 font-semibold">58,742</span>
+                                <span class="text-xs text-gray-400 ml-1">requests</span>
                             </div>
                         </div>
-                        <div class="h-1 bg-gray-700 mt-2 rounded-full">
-                            <div id="levelProgressBar" class="h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" style="width: 0%"></div>
+                        <div class="bg-gray-800 h-2 rounded-full mb-3">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 92%"></div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Gráfico de Atividade -->
-                <div class="gate-card p-4 mb-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-sm font-medium text-gray-300 tracking-wider">
-                            <i class="bi bi-activity text-blue-400 mr-1"></i> GATE ACTIVITY
-                        </h3>
-                        <div class="flex space-x-2">
-                            <button class="timeframe-btn active text-xs px-2 py-1 rounded bg-gray-700 text-white" data-days="7">7D</button>
-                            <button class="timeframe-btn text-xs px-2 py-1 rounded bg-gray-700 text-gray-400 hover:text-white" data-days="30">30D</button>
-                            <button class="timeframe-btn text-xs px-2 py-1 rounded bg-gray-700 text-gray-400 hover:text-white" data-days="90">90D</button>
-                        </div>
-                    </div>
-                    <div class="relative h-64">
-                        <canvas id="usageChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- URLs do Portal -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="gate-card p-4">
-    <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-        <i class="bi bi-code-slash text-blue-400 mr-2"></i> API ENDPOINT
-    </h3>
-    <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
-        <span id="apiEndpoint" class="text-xs text-white truncate font-mono">http://localhost:8000/gate-123</span>
-        <button class="copy-button p-1 text-gray-400 hover:text-blue-400 transition">
-            <i class="bi bi-clipboard"></i>
-        </button>
-    </div>
-    <p class="text-xs text-gray-500 mt-2">Access this URL for JSON response</p>
-</div>
-                    
-                    <div class="gate-card p-4">
-                        <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                            <i class="bi bi-google text-blue-400 mr-2"></i> SPREADSHEET LINK
-                        </h3>
-                        <div class="flex items-center justify-between bg-gray-800 p-3 rounded border border-gray-700">
-                            <span id="spreadsheetUrl" class="text-xs text-white truncate font-mono">https://docs.google.com/••••••••••</span>
-                            <button class="copy-button p-1 text-gray-400 hover:text-blue-400 transition">
-                                <i class="bi bi-clipboard"></i>
+                        <div class="flex items-center justify-between mt-3">
+                            <p class="text-xs text-gray-400">
+                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
+                                Não requer autenticação
+                            </p>
+                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
+                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
                             </button>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">Connected Google Sheets document</p>
                     </div>
                 </div>
-            </div>
 
-            <!-- Outras abas -->
-            <div id="settings" class="tab-content">
-                <div class="gate-card p-4">
-                    <h3 class="text-lg font-bold text-white mb-4 tracking-wider">GATE SETTINGS</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2 tracking-wider">GATE NAME</label>
-                            <input type="text" id="editGateName" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                <!-- Endpoint 2 -->
+                <div class="gate-card overflow-hidden">
+                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
+                            <span class="font-mono">/projectid/animes/{id}</span>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2 tracking-wider">STATUS</label>
-                            <select id="editGateStatus" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
-                        </div>
-                        <button id="saveSettings" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold tracking-wider">
-                            SAVE CHANGES
-                        </button>
+                        <span class="text-sm text-gray-300">Obter anime específico</span>
                     </div>
-                </div>
-            </div>
-
-            <div id="cache" class="tab-content">
-                <div class="gate-card p-4">
-                    <h3 class="text-lg font-bold text-white mb-4 tracking-wider">CACHE MANAGEMENT</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h4 class="text-sm font-medium text-gray-300 mb-1 tracking-wider">CURRENT CACHE SIZE</h4>
-                                <p class="text-xs text-gray-400">Approximately <span id="cacheSize">0 KB</span></p>
+                    <div class="px-6 py-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="mb-0">Retorna detalhes de um anime específico.</p>
+                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
+                                <span class="text-blue-300 font-semibold">26,189</span>
+                                <span class="text-xs text-gray-400 ml-1">requests</span>
                             </div>
-                            <button id="clearCache" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm font-semibold tracking-wider">
-                                CLEAR CACHE
+                        </div>
+                        <div class="bg-gray-800 h-2 rounded-full mb-3">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 63%"></div>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-2"><strong>Parâmetros de Caminho:</strong></p>
+                        <ul class="list-disc list-inside text-sm text-gray-400 pl-4">
+                            <li><span class="font-mono">id</span>: ID do anime (obrigatório)</li>
+                        </ul>
+                        <div class="flex items-center justify-between mt-3">
+                            <p class="text-xs text-gray-400">
+                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
+                                Não requer autenticação
+                            </p>
+                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
+                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
                             </button>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2 tracking-wider">CACHE STRATEGY</label>
-                            <select id="cacheStrategy" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
-                                <option value="aggressive">Aggressive (Cache all)</option>
-                                <option value="moderate" selected>Moderate (Cache essentials)</option>
-                                <option value="light">Light (Minimal caching)</option>
-                            </select>
+                    </div>
+                </div>
+
+                <!-- Endpoint 3 -->
+                <div class="gate-card overflow-hidden">
+                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
+                            <span class="font-mono">/projectid/filmes</span>
+                        </div>
+                        <span class="text-sm text-gray-300">Listar todos os filmes</span>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="mb-0">Retorna uma lista com todos os filmes disponíveis.</p>
+                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
+                                <span class="text-blue-300 font-semibold">42,516</span>
+                                <span class="text-xs text-gray-400 ml-1">requests</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 h-2 rounded-full mb-3">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 78%"></div>
+                        </div>
+                        <div class="flex items-center justify-between mt-3">
+                            <p class="text-xs text-gray-400">
+                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
+                                Não requer autenticação
+                            </p>
+                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
+                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Endpoint 4 -->
+                <div class="gate-card overflow-hidden">
+                    <div class="bg-blue-900 bg-opacity-30 px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="inline-block bg-green-500 text-white font-semibold text-sm rounded px-2 py-1 mr-3">GET</span>
+                            <span class="font-mono">/projectid/filmes/{id}</span>
+                        </div>
+                        <span class="text-sm text-gray-300">Obter filme específico</span>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="mb-0">Retorna detalhes de um filme específico.</p>
+                            <div class="bg-blue-900 bg-opacity-40 px-3 py-1 rounded-full">
+                                <span class="text-blue-300 font-semibold">19,873</span>
+                                <span class="text-xs text-gray-400 ml-1">requests</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 h-2 rounded-full mb-3">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style="width: 45%"></div>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-2"><strong>Parâmetros de Caminho:</strong></p>
+                        <ul class="list-disc list-inside text-sm text-gray-400 pl-4">
+                            <li><span class="font-mono">id</span>: ID do filme (obrigatório)</li>
+                        </ul>
+                        <div class="flex items-center justify-between mt-3">
+                            <p class="text-xs text-gray-400">
+                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
+                                Não requer autenticação
+                            </p>
+                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
+                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
+        </main>
 
-            <div id="form-snippets" class="tab-content">
-                <div class="gate-card p-4">
-                    <h3 class="text-lg font-bold text-white mb-4 tracking-wider">INTEGRATION CODE</h3>
-                    <div class="space-y-6">
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                                <i class="bi bi-braces text-blue-400 mr-2"></i> FETCH API EXAMPLE
-                            </h4>
-                            <div class="relative">
-                                <pre id="fetchSnippet" class="bg-gray-800 p-4 rounded-lg text-xs text-gray-300 font-mono overflow-x-auto">
+        <!-- Exemplos de Uso -->
+        <div class="mt-10">
+            <h2 class="text-xl font-semibold mb-4 text-blue-300">Exemplos de Uso</h2>
+            <div class="gate-card p-4">
+                <h3 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
+                    <i class="bi bi-braces text-blue-400 mr-2"></i> FETCH API EXAMPLE
+                </h3>
+                <div class="relative">
+                    <pre class="bg-gray-800 p-4 rounded-lg text-xs text-gray-300 font-mono overflow-x-auto">
 // JavaScript Fetch Example
-fetch('<span class="text-blue-300">${window.location.origin}/api/</span><span id="snippetProjectId" class="text-purple-300">PROJECT_ID</span>')
+fetch('https://api.shadowgate.com/v1/projectid/animes')
   .then(response => response.json())
   .then(data => console.log(data))
   .catch(error => console.error('Error:', error));</pre>
-                                <button class="copy-snippet absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-400 transition">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-300 mb-2 tracking-wider flex items-center">
-                                <i class="bi bi-filetype-html text-blue-400 mr-2"></i> HTML FORM EXAMPLE
-                            </h4>
-                            <div class="relative">
-                                <pre id="htmlSnippet" class="bg-gray-800 p-4 rounded-lg text-xs text-gray-300 font-mono overflow-x-auto">
-&lt;form action="<span class="text-blue-300">${window.location.origin}/api/</span><span id="snippetProjectId2" class="text-purple-300">PROJECT_ID</span>/data" method="POST"&gt;
-  &lt;input type="text" name="username" placeholder="Username"&gt;
-  &lt;input type="email" name="email" placeholder="Email"&gt;
-  &lt;button type="submit"&gt;Submit&lt;/button&gt;
-&lt;/form&gt;</pre>
-                                <button class="copy-snippet absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-400 transition">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <button class="copy-snippet absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-400 transition">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
     <!-- Rodapé -->
     <footer class="fixed bottom-0 w-full bg-gray-900 border-t border-gray-800 shadow-lg">
@@ -307,8 +259,5 @@ fetch('<span class="text-blue-300">${window.location.origin}/api/</span><span id
             </button>
         </div>
     </footer>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../auth.js"></script>
-    <script src="dashboard.js"></script>
 </body>
 </html>
