@@ -150,7 +150,7 @@
                     <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
                         <div class="flex items-center mb-2 sm:mb-0">
                             <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
-                            <span class="font-mono text-sm sm:text-base">/projectid/animes</span>
+                            <span class="font-mono text-sm sm:text-base" id="animes_rw">/projectid/animes</span>
                         </div>
                     </div>
                     <div class="px-4 sm:px-6 py-3">
@@ -172,7 +172,7 @@
                     <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
                         <div class="flex items-center mb-2 sm:mb-0">
                             <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
-                            <span class="font-mono text-sm sm:text-base">/projectid/animes/{id}</span>
+                            <span class="font-mono text-sm sm:text-base" id="filmes_rq">/projectid/animes/{id}</span>
                         </div>
                     </div>
                     <div class="px-4 sm:px-6 py-3">
@@ -332,6 +332,8 @@
         
         // Informações do gate
         document.getElementById('gateId').textContent = `GATE ID: ${currentProject.project_id}`;
+        document.getElementById('animes_rw').textContent = `/${currentProject.project_id}/animes`;
+        document.getElementById('filmes_rq').textContent = `/${currentProject.project_id}/filmes`;
         
         // Estatísticas
         document.getElementById('totalRequests').textContent = currentProject.total_requests?.toLocaleString() || '0';
