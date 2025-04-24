@@ -196,6 +196,7 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
       .filter(movie => 
         movie.title.toLowerCase().includes(query.toLowerCase()) ||
         (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
+      )
       .map(movie => ({
         ...formatMovieData(movie),
         player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&tmdbId=${movie.id}`
@@ -249,7 +250,6 @@ app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
 app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
   try {
     const tmdbId = req.params.tmdbId;
-    // Implementação simplificada - em produção, use uma tabela de mapeamento
     const streamId = await findStreamIdByTmdbId(tmdbId);
     
     if (!streamId) {
@@ -269,7 +269,6 @@ app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
 });
 
 async function findStreamIdByTmdbId(tmdbId) {
-  // Implementação básica - em produção, consulte uma tabela de mapeamento
   return tmdbId;
 }
 
