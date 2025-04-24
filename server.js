@@ -189,9 +189,11 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
 
     const searchData = await tmdbSearchResponse.json();
     
-    const resultadosFiltrados = searchData.results.filter(movie =>
-      movie.title.toLowerCase().includes(query.toLowerCase()) ||
-      (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
+    const resultadosFiltrados = searchData.results
+      .filter(movie => 
+        movie.title.toLowerCase().includes(query.toLowerCase()) ||
+        (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
+      )
       .map(formatMovieData);
 
     res.json({
