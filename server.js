@@ -101,6 +101,23 @@ async function incrementRequestCount(projectId, endpointType) {
   }
 }
 
+function formatMovieData(movie) {
+  return {
+    id: movie.id,
+    title: movie.title,
+    original_title: movie.original_title,
+    overview: movie.overview,
+    poster_path: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
+    backdrop_path: movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
+    release_date: movie.release_date,
+    vote_average: movie.vote_average,
+    genres: movie.genres ? movie.genres.map(g => g.name) : [],
+    runtime: movie.runtime,
+    adult: movie.adult,
+    tmdb_url: `https://www.themoviedb.org/movie/${movie.id}`
+  };
+}
+
 app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -124,6 +141,74 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
+  }
+});
+
+app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const query = req.query.q;
+    
+    if (!query) {
+      return res.status(400).json({ 
+        status: 'error',
+        error: 'Parâmetro de busca "q" é obrigatório' 
+      });
+    }
+
+    await incrementRequestCount(projectId, 'filmes_search');
+
+    if (!isNaN(query)) {
+      const tmdbResponse = await fetch(
+        `https://api.themoviedb.org/3/movie/${query}?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR`
+      );
+      
+      if (!tmdbResponse.ok) {
+        return res.status(404).json({ 
+          status: 'error',
+          error: 'Filme não encontrado no TMDB' 
+        });
+      }
+
+      const filme = await tmdbResponse.json();
+      return res.json({
+        status: 'success',
+        projectId,
+        searchType: 'id',
+        data: formatMovieData(filme)
+      });
+    }
+
+    const tmdbSearchResponse = await fetch(
+      `https://api.themoviedb.org/3/search/movie?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR&query=${encodeURIComponent(query)}`
+    );
+
+    if (!tmdbSearchResponse.ok) {
+      throw new Error('Falha ao buscar filmes no TMDB');
+    }
+
+    const searchData = await tmdbSearchResponse.json();
+    
+    const resultadosFiltrados = searchData.results.filter(movie =>
+      movie.title.toLowerCase().includes(query.toLowerCase()) ||
+      (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
+      .map(formatMovieData);
+
+    res.json({
+      status: 'success',
+      projectId,
+      searchType: 'nome',
+      query,
+      resultsCount: resultadosFiltrados.length,
+      data: resultadosFiltrados
+    });
+
+  } catch (err) {
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Erro na busca de filmes',
+      details: err.message 
+    });
   }
 });
 
