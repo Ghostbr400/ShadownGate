@@ -118,6 +118,7 @@ function formatMovieData(movie) {
   };
 }
 
+// Endpoint para listar filmes
 app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -129,7 +130,7 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
     const filmesData = await apiResponse.json();
     const filmesComLinks = filmesData.map(filme => ({
       ...filme,
-      player: `${req.protocol}://${req.get('host')}/api/${projectId}/stream/${filme.stream_id}.mp4`,
+      player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&streamId=${filme.stream_id}`,
       stream_icon: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${filme.stream_id}`
     }));
     res.json({
@@ -144,6 +145,7 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   }
 });
 
+// Endpoint para busca de filmes
 app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -175,7 +177,10 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
         status: 'success',
         projectId,
         searchType: 'id',
-        data: formatMovieData(filme)
+        data: {
+          ...formatMovieData(filme),
+          player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&tmdbId=${filme.id}`
+        }
       });
     }
 
@@ -193,8 +198,10 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
       .filter(movie => 
         movie.title.toLowerCase().includes(query.toLowerCase()) ||
         (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
-      )
-      .map(formatMovieData);
+      .map(movie => ({
+        ...formatMovieData(movie),
+        player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&tmdbId=${movie.id}`
+      }));
 
     res.json({
       status: 'success',
@@ -214,6 +221,80 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
   }
 });
 
+// Endpoint para redirecionar para o player
+app.get('/api/:id/stream/:streamId', verifyProject, async (req, res) => {
+  try {
+    const streamId = req.params.streamId;
+    const projectId = req.params.id;
+    res.redirect(`/player.html?projectId=${projectId}&streamId=${streamId}`);
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: 'Stream error' });
+  }
+});
+
+// Endpoint para stream direto (usado pelo player)
+app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
+  try {
+    const streamId = req.params.streamId;
+    const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
+    const streamResponse = await fetch(realStreamUrl);
+    if (!streamResponse.ok) return res.status(404).json({ status: 'error', error: 'Stream not found' });
+    res.set({ 
+      'Content-Type': 'video/mp4', 
+      'Cache-Control': 'no-store',
+      'Accept-Ranges': 'bytes'
+    });
+    streamResponse.body.pipe(res);
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: 'Stream error' });
+  }
+});
+
+// Endpoint para mapear TMDB ID para stream ID
+app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
+  try {
+    const tmdbId = req.params.tmdbId;
+    // Implementação simplificada - em produção, use uma tabela de mapeamento
+    const streamId = await findStreamIdByTmdbId(tmdbId);
+    
+    if (!streamId) {
+      return res.status(404).json({ status: 'error', error: 'Stream not found for this TMDB ID' });
+    }
+    
+    res.json({
+      status: 'success',
+      projectId: req.params.id,
+      tmdbId,
+      streamId,
+      streamUrl: `${req.protocol}://${req.get('host')}/player.html?projectId=${req.params.id}&streamId=${streamId}`
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// Função auxiliar para mapear TMDB ID para stream ID
+async function findStreamIdByTmdbId(tmdbId) {
+  // Implementação básica - em produção, consulte uma tabela de mapeamento
+  // Aqui estamos apenas retornando o mesmo ID como exemplo
+  return tmdbId;
+}
+
+// Endpoint para ícones
+app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
+  try {
+    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+      <rect width="100" height="100" fill="#ddd"/>
+      <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
+    </svg>`;
+    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
+    res.send(svgIcon);
+  } catch (err) {
+    res.status(500).send('Icon error');
+  }
+});
+
+// Endpoint para animes
 app.get('/api/:id/animes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -254,32 +335,7 @@ function generateAnimeData(projectId) {
   }));
 }
 
-app.get('/api/:id/stream/:streamId', verifyProject, async (req, res) => {
-  try {
-    const streamId = req.params.streamId;
-    const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
-    const streamResponse = await fetch(realStreamUrl);
-    if (!streamResponse.ok) return res.status(404).json({ status: 'error', error: 'Stream not found' });
-    res.set({ 'Content-Type': 'video/mp4', 'Cache-Control': 'no-store' });
-    streamResponse.body.pipe(res);
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Stream error' });
-  }
-});
-
-app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
-  try {
-    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
-      <rect width="100" height="100" fill="#ddd"/>
-      <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
-    </svg>`;
-    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
-    res.send(svgIcon);
-  } catch (err) {
-    res.status(500).send('Icon error');
-  }
-});
-
+// Endpoint de teste
 app.get('/api/test/:id', async (req, res) => {
   try {
     await incrementRequestCount(req.params.id, 'test');
@@ -294,6 +350,12 @@ app.get('/api/test/:id', async (req, res) => {
   }
 });
 
+// Rota para o player
+app.get('/player.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'player.html'));
+});
+
+// Rota padrão
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
