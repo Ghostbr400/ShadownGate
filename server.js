@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
@@ -6,57 +7,51 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const app = express();
 const port = process.env.PORT || 3000;
 
-const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
+// Supabase Configuration
+const supabaseUrl = process.env.SUPABASE_URL || 'https://nwoswxbtlquiekyangbs.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY || 'your-supabase-key';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Xtream API Configuration
 const XTREAM_CONFIG = {
-  host: 'sigcine1.space',
-  port: 80,
-  username: '474912714',
-  password: '355591139'
+  host: process.env.XTREAM_HOST || 'sigcine1.space',
+  port: process.env.XTREAM_PORT || 80,
+  username: process.env.XTREAM_USERNAME || '474912714',
+  password: process.env.XTREAM_PASSWORD || '355591139'
 };
 
+// Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// CORS Configuration
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
   next();
 });
 
+// Request Tracker
 const requestTracker = {
   requests: new Map(),
-  track: function(projectId, endpoint) {
+  track(projectId, endpoint) {
     const now = Date.now();
     const key = `${projectId}_${endpoint}`;
     if (!this.requests.has(key)) this.requests.set(key, []);
     this.requests.get(key).push(now);
+    
+    // Cleanup old requests (older than 1 hour)
+    this.requests.set(key, this.requests.get(key).filter(timestamp => now - timestamp < 3600000));
   },
-  getCount: function(projectId, endpoint) {
+  getCount(projectId, endpoint) {
     const key = `${projectId}_${endpoint}`;
     return this.requests.has(key) ? this.requests.get(key).length : 0;
   }
 };
 
-async function verifyProject(req, res, next) {
-  const projectId = req.params.id;
-  try {
-    const { data: project, error } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('project_id', projectId)
-      .single();
-    if (error || !project) return res.status(404).json({ status: 'error', error: 'Project not found' });
-    req.project = project;
-    next();
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error' });
-  }
-}
-
+// Utility Functions
 async function incrementRequestCount(projectId, endpointType) {
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -65,6 +60,7 @@ async function incrementRequestCount(projectId, endpointType) {
       .select('*')
       .eq('project_id', projectId)
       .single();
+
     if (fetchError || !currentData) {
       const { error: createError } = await supabase
         .from('user_projects')
@@ -80,23 +76,30 @@ async function incrementRequestCount(projectId, endpointType) {
       if (createError) throw createError;
       return { status: 'created' };
     }
+
     const updateData = {
       requests_today: currentData.requests_today + 1,
       total_requests: currentData.total_requests + 1,
       last_request_date: today,
-      daily_requests: { ...currentData.daily_requests }
+      daily_requests: { ...currentData.daily_requests },
+      last_endpoint: endpointType
     };
+
     updateData.daily_requests[today] = (updateData.daily_requests[today] || 0) + 1;
+
     if (updateData.total_requests >= (currentData.level * 100)) {
       updateData.level = currentData.level + 1;
     }
+
     const { error: updateError } = await supabase
       .from('user_projects')
       .update(updateData)
       .eq('project_id', projectId);
+
     if (updateError) throw updateError;
     return { status: 'updated' };
   } catch (error) {
+    console.error('Error incrementing request count:', error);
     throw error;
   }
 }
@@ -118,42 +121,92 @@ function formatMovieData(movie) {
   };
 }
 
-// Nova rota para buscar título do filme pelo streamId
-app.get('/api/:id/get-movie-title/:streamId', verifyProject, async (req, res) => {
-    try {
-        const streamId = req.params.streamId;
-        const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_info&vod_id=${streamId}`;
-        const apiResponse = await fetch(apiUrl);
-        
-        if (!apiResponse.ok) {
-            return res.json({ status: 'error', error: 'Failed to fetch movie info' });
-        }
-        
-        const movieInfo = await apiResponse.json();
-        res.json({
-            status: 'success',
-            title: movieInfo.name || movieInfo.title || 'Filme',
-            streamId
-        });
-    } catch (err) {
-        res.json({ status: 'error', error: err.message });
+// Middleware
+async function verifyProject(req, res, next) {
+  const projectId = req.params.id;
+  try {
+    const { data: project, error } = await supabase
+      .from('user_projects')
+      .select('*')
+      .eq('project_id', projectId)
+      .single();
+
+    if (error || !project) {
+      return res.status(404).json({ 
+        status: 'error', 
+        error: 'Project not found',
+        code: 'PROJECT_NOT_FOUND'
+      });
     }
+
+    req.project = project;
+    next();
+  } catch (err) {
+    console.error('Project verification error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      error: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+}
+
+// ======================
+// PAGE ROUTES
+// ======================
+
+// Main Pages
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/home', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'main', 'home.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'main', 'dashboard.html'));
+});
+
+// Auth Pages
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'account', 'login.html'));
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'account', 'register.html'));
+});
+
+// Player
+app.get('/player', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'player.html'));
+});
+
+// ======================
+// API ROUTES
+// ======================
+
+// Movie Routes
 app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
     await incrementRequestCount(projectId, 'filmes');
     requestTracker.track(projectId, 'filmes');
+
     const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`;
     const apiResponse = await fetch(apiUrl);
-    if (!apiResponse.ok) throw new Error('Failed to fetch movies data');
+    
+    if (!apiResponse.ok) {
+      throw new Error(`XTream API responded with status ${apiResponse.status}`);
+    }
+
     const filmesData = await apiResponse.json();
     const filmesComLinks = filmesData.map(filme => ({
       ...filme,
-      player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&streamId=${filme.stream_id}`,
+      player: `${req.protocol}://${req.get('host')}/player?projectId=${projectId}&streamId=${filme.stream_id}`,
       stream_icon: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${filme.stream_id}`
     }));
+
     res.json({
       status: 'success',
       projectId,
@@ -162,7 +215,13 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
       data: filmesComLinks
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
+    console.error('Filmes endpoint error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      error: 'Failed to fetch movies data',
+      details: err.message,
+      code: 'MOVIES_FETCH_ERROR'
+    });
   }
 });
 
@@ -170,11 +229,12 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
     const query = req.query.q;
-    
+
     if (!query) {
       return res.status(400).json({ 
         status: 'error',
-        error: 'Parâmetro de busca "q" é obrigatório' 
+        error: 'Search query parameter "q" is required',
+        code: 'MISSING_QUERY_PARAM'
       });
     }
 
@@ -182,13 +242,14 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
 
     if (!isNaN(query)) {
       const tmdbResponse = await fetch(
-        `https://api.themoviedb.org/3/movie/${query}?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR`
+        `https://api.themoviedb.org/3/movie/${query}?api_key=${process.env.TMDB_API_KEY}&language=pt-BR`
       );
-      
+
       if (!tmdbResponse.ok) {
         return res.status(404).json({ 
           status: 'error',
-          error: 'Filme não encontrado no TMDB' 
+          error: 'Movie not found on TMDB',
+          code: 'TMDB_MOVIE_NOT_FOUND'
         });
       }
 
@@ -199,21 +260,20 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
         searchType: 'id',
         data: {
           ...formatMovieData(filme),
-          player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&tmdbId=${filme.id}`
+          player: `${req.protocol}://${req.get('host')}/player?projectId=${projectId}&tmdbId=${filme.id}`
         }
       });
     }
 
     const tmdbSearchResponse = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR&query=${encodeURIComponent(query)}`
+      `https://api.themoviedb.org/3/search/movie?api_key=${process.env.TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(query)}`
     );
 
     if (!tmdbSearchResponse.ok) {
-      throw new Error('Falha ao buscar filmes no TMDB');
+      throw new Error(`TMDB API responded with status ${tmdbSearchResponse.status}`);
     }
 
     const searchData = await tmdbSearchResponse.json();
-    
     const resultadosFiltrados = searchData.results
       .filter(movie => 
         movie.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -221,34 +281,41 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
       )
       .map(movie => ({
         ...formatMovieData(movie),
-        player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&tmdbId=${movie.id}`
+        player: `${req.protocol}://${req.get('host')}/player?projectId=${projectId}&tmdbId=${movie.id}`
       }));
 
     res.json({
       status: 'success',
       projectId,
-      searchType: 'nome',
+      searchType: 'name',
       query,
       resultsCount: resultadosFiltrados.length,
       data: resultadosFiltrados
     });
 
   } catch (err) {
+    console.error('Filmes search error:', err);
     res.status(500).json({ 
       status: 'error',
-      error: 'Erro na busca de filmes',
-      details: err.message 
+      error: 'Movie search failed',
+      details: err.message,
+      code: 'MOVIE_SEARCH_ERROR'
     });
   }
 });
 
+// Stream Routes
 app.get('/api/:id/stream/:streamId', verifyProject, async (req, res) => {
   try {
-    const streamId = req.params.streamId;
-    const projectId = req.params.id;
-    res.redirect(`/player.html?projectId=${projectId}&streamId=${streamId}`);
+    const { streamId, id: projectId } = req.params;
+    res.redirect(`/player?projectId=${projectId}&streamId=${streamId}`);
   } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Stream error' });
+    console.error('Stream redirect error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      error: 'Stream redirect failed',
+      code: 'STREAM_REDIRECT_ERROR'
+    });
   }
 });
 
@@ -256,43 +323,64 @@ app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
   try {
     const streamId = req.params.streamId;
     const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
+    
     const streamResponse = await fetch(realStreamUrl);
-    if (!streamResponse.ok) return res.status(404).json({ status: 'error', error: 'Stream not found' });
+    if (!streamResponse.ok) {
+      return res.status(404).json({ 
+        status: 'error', 
+        error: 'Stream not found',
+        code: 'STREAM_NOT_FOUND'
+      });
+    }
+
     res.set({ 
       'Content-Type': 'video/mp4', 
       'Cache-Control': 'no-store',
       'Accept-Ranges': 'bytes'
     });
+
     streamResponse.body.pipe(res);
   } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Stream error' });
+    console.error('Direct stream error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      error: 'Stream processing failed',
+      code: 'STREAM_PROCESSING_ERROR'
+    });
   }
 });
 
-app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
+// Additional API Routes
+app.get('/api/:id/get-movie-title/:streamId', verifyProject, async (req, res) => {
   try {
-    const tmdbId = req.params.tmdbId;
-    const streamId = await findStreamIdByTmdbId(tmdbId);
+    const streamId = req.params.streamId;
+    const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_info&vod_id=${streamId}`;
     
-    if (!streamId) {
-      return res.status(404).json({ status: 'error', error: 'Stream not found for this TMDB ID' });
+    const apiResponse = await fetch(apiUrl);
+    if (!apiResponse.ok) {
+      return res.status(404).json({ 
+        status: 'error', 
+        error: 'Movie info not found',
+        code: 'MOVIE_INFO_NOT_FOUND'
+      });
     }
-    
+
+    const movieInfo = await apiResponse.json();
     res.json({
       status: 'success',
-      projectId: req.params.id,
-      tmdbId,
-      streamId,
-      streamUrl: `${req.protocol}://${req.get('host')}/player.html?projectId=${req.params.id}&streamId=${streamId}`
+      title: movieInfo.name || movieInfo.title || 'Filme',
+      streamId
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', error: err.message });
+    console.error('Movie title fetch error:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      error: 'Failed to fetch movie title',
+      details: err.message,
+      code: 'MOVIE_TITLE_FETCH_ERROR'
+    });
   }
 });
-
-async function findStreamIdByTmdbId(tmdbId) {
-  return tmdbId;
-}
 
 app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
   try {
@@ -300,75 +388,39 @@ app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
       <rect width="100" height="100" fill="#ddd"/>
       <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
     </svg>`;
-    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
+    
+    res.set({ 
+      'Content-Type': 'image/svg+xml', 
+      'Cache-Control': 'public, max-age=86400'
+    });
+    
     res.send(svgIcon);
   } catch (err) {
-    res.status(500).send('Icon error');
+    console.error('Icon generation error:', err);
+    res.status(500).send('Icon generation failed');
   }
 });
 
-app.get('/api/:id/animes', verifyProject, async (req, res) => {
-  try {
-    const projectId = req.params.id;
-    const incrementResult = await incrementRequestCount(projectId, 'animes');
-    requestTracker.track(projectId, 'animes');
-    const { data: projectData } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('project_id', projectId)
-      .single();
-    res.json({
-      status: 'success',
-      projectId,
-      timestamp: new Date().toISOString(),
-      incrementResult,
-      requestCount: requestTracker.getCount(projectId, 'animes'),
-      dbData: projectData,
-      data: generateAnimeData(projectId)
-    });
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
-  }
+// ======================
+// ERROR HANDLERS
+// ======================
+
+// 404 Not Found
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
-function generateAnimeData(projectId) {
-  const baseAnimes = [
-    { id: 1, title: "Attack on Titan", episodes: 75, year: 2013 },
-    { id: 2, title: "Demon Slayer", episodes: 44, year: 2019 },
-    { id: 3, title: "Jujutsu Kaisen", episodes: 24, year: 2020 }
-  ];
-  const hash = projectId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return baseAnimes.map(anime => ({
-    ...anime,
-    episodes: anime.episodes + (hash % 5),
-    year: anime.year + (hash % 3),
-    rating: (3.5 + (hash % 5 * 0.3)).toFixed(1),
-    projectSpecific: `custom-${projectId.slice(0, 3)}-${anime.id}`
-  }));
-}
-
-app.get('/api/test/:id', async (req, res) => {
-  try {
-    await incrementRequestCount(req.params.id, 'test');
-    const { data } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('project_id', req.params.id)
-      .single();
-    res.json({ status: 'success', data: data || { error: 'No data found' } });
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: err.message });
-  }
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.stack);
+  res.status(500).sendFile(path.join(__dirname, 'public', '500.html'));
 });
 
-app.get('/player.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'player.html'));
-});
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// ======================
+// SERVER INITIALIZATION
+// ======================
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
