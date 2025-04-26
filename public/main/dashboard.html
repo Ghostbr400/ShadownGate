@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shadow Gate - Endpoints</title>
+    <!--<title>Shadow Gate - Endpoints</title>-->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -85,6 +85,20 @@
             display: inline-block;
             margin-top: 8px;
         }
+
+        /* Estilos para os métodos HTTP */
+        .method-get {
+            background-color: #10B981;
+        }
+        .method-post {
+            background-color: #3B82F6;
+        }
+        .method-put {
+            background-color: #F59E0B;
+        }
+        .method-delete {
+            background-color: #EF4444;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -125,8 +139,8 @@
             <div class="gate-card p-6 mb-8">
                 <h2 class="text-xl font-semibold mb-4 text-blue-300">Informações Gerais</h2>
                 
-                <p class="mb-2">URL Base: <span class="font-mono bg-gray-800 px-2 py-1 rounded text-sm">https://api.shadowgate.com/v1</span></p>
-                <p class="mb-4 text-sm">Todas as requisições devem incluir o cabeçalho de autenticação API Key.</p>
+                <p class="mb-2">URL Base: <span class="font-mono bg-gray-800 px-2 py-1 rounded text-sm">https://shadowngate-1.onrender.com/api/{projectid}</span></p>
+                <p class="mb-4 text-sm">Todos os endpoints abaixo devem ser prefixados com a URL base.</p>
                 <div class="flex flex-wrap gap-2 mb-4">
                     <span id="gateId" class="bg-gray-800 text-xs px-3 py-1 rounded-full border border-gray-700 text-blue-300">
                         <i class="bi bi-key-fill mr-1"></i> GATE ID: SG-4269-BT
@@ -144,102 +158,8 @@
                 </div>
             </div>
 
-            <div class="space-y-6">
-                <!-- Endpoint 1 -->
-                <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
-                        <div class="flex items-center mb-2 sm:mb-0">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
-                            <span class="font-mono text-sm sm:text-base" id="animes_rw">/projectid/animes</span>
-                        </div>
-                    </div>
-                    <div class="px-4 sm:px-6 py-3">
-                        <p class="text-sm mb-3">Retorna uma lista com todos os animes disponíveis.</p>
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <p class="text-xs text-gray-400">
-                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
-                                Não requer autenticação
-                            </p>
-                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
-                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Endpoint 2 -->
-                <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
-                        <div class="flex items-center mb-2 sm:mb-0">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
-                            <span class="font-mono text-sm sm:text-base" id="filmes_rq">/projectid/animes/{id}</span>
-                        </div>
-                    </div>
-                    <div class="px-4 sm:px-6 py-3">
-                        <p class="text-sm mb-3">Retorna detalhes de um anime específico.</p>
-                        <p class="text-xs text-gray-400 mb-1"><strong>Parâmetros de Caminho:</strong></p>
-                        <ul class="list-disc list-inside text-xs text-gray-400 pl-2 mb-3">
-                            <li><span class="font-mono">id</span>: ID do anime (obrigatório)</li>
-                        </ul>
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <p class="text-xs text-gray-400">
-                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
-                                Não requer autenticação
-                            </p>
-                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
-                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Endpoint 3 -->
-                <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
-                        <div class="flex items-center mb-2 sm:mb-0">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
-                            <span class="font-mono text-sm sm:text-base">/projectid/filmes</span>
-                        </div>
-                    </div>
-                    <div class="px-4 sm:px-6 py-3">
-                        <p class="text-sm mb-3">Retorna uma lista com todos os filmes disponíveis.</p>
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <p class="text-xs text-gray-400">
-                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
-                                Não requer autenticação
-                            </p>
-                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
-                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Endpoint 4 -->
-                <div class="gate-card overflow-hidden">
-                    <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
-                        <div class="flex items-center mb-2 sm:mb-0">
-                            <span class="inline-block bg-green-500 text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">GET</span>
-                            <span class="font-mono text-sm sm:text-base">/projectid/filmes/{id}</span>
-                        </div>
-                    </div>
-                    <div class="px-4 sm:px-6 py-3">
-                        <p class="text-sm mb-3">Retorna detalhes de um filme específico.</p>
-                        <p class="text-xs text-gray-400 mb-1"><strong>Parâmetros de Caminho:</strong></p>
-                        <ul class="list-disc list-inside text-xs text-gray-400 pl-2 mb-3">
-                            <li><span class="font-mono">id</span>: ID do filme (obrigatório)</li>
-                        </ul>
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <p class="text-xs text-gray-400">
-                                <i class="bi bi-shield-check text-green-400 mr-1"></i> 
-                                Não requer autenticação
-                            </p>
-                            <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
-                                <i class="bi bi-clipboard mr-1"></i> Copiar URL
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <div class="space-y-6" id="endpointsContainer">
+                <!-- Endpoints serão inseridos dinamicamente aqui -->
             </div>
         </main>
     </div>
@@ -258,167 +178,8 @@
             </div>
         </div>
     </footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <script>
-        document.getElementById('menuToggle').addEventListener('click', function() {
-            const menu = document.getElementById('menu');
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-        });
-
-        function showAbout() {
-            alert('Sobre: Shadow Gate API é uma interface para integração com serviços de animes e filmes.');
-        }
-
-        function exit() {
-            alert('Saindo...');
-            // Adicione lógica para sair ou redirecionar
-        }
-    </script>
-    
-    <script>
-    document.addEventListener('DOMContentLoaded', async function() {
-    const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
-    
-    let supabase;
-    let currentProject;
-
-    // Funções básicas
-    function showAlert(message, type = 'info') {
-        const alert = document.createElement('div');
-        alert.className = `alert ${type}`;
-        alert.textContent = message;
-        document.body.appendChild(alert);
-        setTimeout(() => alert.remove(), 3000);
-    }
-
-    async function getCurrentUser() {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) throw error;
-        return user;
-    }
-
-    function getProjectIdFromUrl() {
-        return new URLSearchParams(window.location.search).get('project');
-    }
-
-    // Carregar projeto
-    async function loadProject() {
-        const projectId = getProjectIdFromUrl();
-        if (!projectId) throw new Error('Projeto não especificado');
-
-        const user = await getCurrentUser();
-        const { data, error } = await supabase
-            .from('user_projects')
-            .select('*')
-            .eq('project_id', projectId)
-            .eq('user_id', user.id)
-            .single();
-
-        if (error) throw error;
-        return data;
-    }
-
-    // Atualizar UI com todos os elementos
-    function updateUI() {
-        if (!currentProject) return;
-        
-        // Nome do projeto
-        const projectNameElement = document.querySelector('.project-name strong');
-        if (projectNameElement) {
-            projectNameElement.textContent = currentProject.name || 'Shadow Gate API';
-        }
-        
-        // Informações do gate
-        document.getElementById('gateId').textContent = `GATE ID: ${currentProject.project_id}`;
-        document.getElementById('animes_rw').textContent = `/${currentProject.project_id}/animes`;
-        document.getElementById('filmes_rq').textContent = `/${currentProject.project_id}/filmes`;
-        
-        // Estatísticas
-        document.getElementById('totalRequests').textContent = currentProject.total_requests?.toLocaleString() || '0';
-        document.getElementById('level').textContent = currentProject.level || '1';
-        
-        // Barra de progresso
-        const progress = (currentProject.total_requests % 100) || 0;
-        document.getElementById('levelBar').style.width = `${progress}%`;
-        
-        // Configurar botões de copiar URL
-        setupCopyButtons();
-    }
-
-    // Configurar botões de copiar
-    function setupCopyButtons() {
-        document.querySelectorAll('.copy-button').forEach(button => {
-            button.addEventListener('click', function() {
-                const endpoint = this.closest('.gate-card').querySelector('span.font-mono').textContent;
-                const fullUrl = `${window.location.origin}/api/${currentProject.project_id}${endpoint}`;
-                
-                navigator.clipboard.writeText(fullUrl).then(() => {
-                    showAlert('URL copiada com sucesso!', 'success');
-                }).catch(err => {
-                    showAlert('Falha ao copiar URL', 'danger');
-                });
-            });
-        });
-    }
-
-    // Configurar eventos
-    function setupEventListeners() {
-        // Botão de voltar
-        document.getElementById('backButton').addEventListener('click', () => {
-            window.location.href = 'home.html';
-        });
-
-        // Menu toggle
-        document.getElementById('menuToggle').addEventListener('click', function() {
-            const menu = document.getElementById('menu');
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-        });
-
-        // Funções do menu
-        function showAbout() {
-            alert('Sobre: Shadow Gate API\nVersão 1.0\nProjeto: ' + (currentProject?.name || 'N/A'));
-        }
-
-        function exit() {
-            supabase.auth.signOut().then(() => {
-                window.location.href = 'login.html';
-            });
-        }
-
-        // Itens do menu
-        document.querySelector('.menu-item:nth-child(1)').addEventListener('click', showAbout);
-        document.querySelector('.menu-item:nth-child(2)').addEventListener('click', exit);
-        
-        // Rodapé interativo
-        document.querySelector('footer div:nth-child(1)').addEventListener('click', () => {
-            window.location.href = 'home.html';
-        });
-        document.querySelector('footer div:nth-child(2)').addEventListener('click', () => {
-            window.location.href = 'dashboard.html';
-        });
-        document.querySelector('footer div:nth-child(3)').addEventListener('click', exit);
-    }
-
-    // Inicialização
-    async function initialize() {
-        try {
-            supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-            currentProject = await loadProject();
-            
-            updateUI();
-            setupEventListeners();
-
-        } catch (error) {
-            showAlert(error.message, 'danger');
-            console.error(error);
-            setTimeout(() => window.location.href = 'home.html', 2000);
-        }
-    }
-
-    initialize();
-});
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="dashboard.js"></script>
 </body>
 </html>
