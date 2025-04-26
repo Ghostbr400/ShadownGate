@@ -5,10 +5,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     let supabase;
     let currentProject;
 
-    // Funções básicas
+    // Fun��ões básicas
     function showAlert(message, type = 'info') {
         const alert = document.createElement('div');
-        alert.className = `alert ${type}`;
+        alert.className = `fixed top-4 right-4 px-4 py-2 rounded-md text-white ${
+            type === 'success' ? 'bg-green-500' : 
+            type === 'danger' ? 'bg-red-500' : 'bg-blue-500'
+        }`;
         alert.textContent = message;
         document.body.appendChild(alert);
         setTimeout(() => alert.remove(), 3000);
@@ -41,135 +44,185 @@ document.addEventListener('DOMContentLoaded', async function() {
         return data;
     }
 
-    // Gráfico otimizado
-    async function initChart() {
-        if (!currentProject) return;
-        
-        const ctx = document.getElementById('usageChart').getContext('2d');
-        const projectDate = new Date(currentProject.created_at);
-        const today = new Date();
-        
-        // Gerar datas desde a criação do projeto até hoje
-        const dates = [];
-        const current = new Date(projectDate);
-        
-        while (current <= today) {
-            dates.push(new Date(current));
-            current.setDate(current.getDate() + 1);
-        }
-        
-        // Processar dados
-        const labels = dates.map(date => 
-            date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        );
-        
-        const values = dates.map(date => {
-            const dateStr = date.toISOString().split('T')[0];
-            return currentProject.daily_requests?.[dateStr] || 0;
-        });
-
-        // Se já existir um gráfico, destruir antes de criar novo
-        if (window.currentChart) {
-            window.currentChart.destroy();
-        }
-
-        window.currentChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Requests',
-                    data: values,
-                    backgroundColor: 'rgba(58, 107, 255, 0.2)',
-                    borderColor: 'rgba(58, 107, 255, 1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true }
-                }
-            }
+    // Configurar botões de copiar
+    function setupCopyButtons() {
+        document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const endpoint = this.closest('.gate-card').querySelector('span.font-mono').textContent;
+                const fullUrl = `https://shadowngate-1.onrender.com${endpoint.replace('{projectid}', currentProject.project_id)}`;
+                
+                navigator.clipboard.writeText(fullUrl).then(() => {
+                    showAlert('URL copiada com sucesso!', 'success');
+                }).catch(err => {
+                    showAlert('Falha ao copiar URL', 'danger');
+                });
+            });
         });
     }
 
-    // Atualizar UI
+    // Criar cards de endpoint
+    function createEndpointCards() {
+        const endpointsContainer = document.getElementById('endpointsContainer');
+        
+        const endpoints = [
+            {
+                method: 'GET',
+                path: '/api/{projectid}/animes',
+                description: 'Retorna uma lista com todos os animes disponíveis.',
+                authRequired: false,
+                params: []
+            },
+            {
+                method: 'GET',
+                path: '/api/{projectid}/filmes',
+                description: 'Retorna uma lista com todos os filmes disponíveis.',
+                authRequired: false,
+                params: []
+            },
+            {
+                method: 'GET',
+                path: '/api/{projectid}/filmes/q?q={query}',
+                description: 'Busca filmes por título ou ID do TMDB.',
+                authRequired: false,
+                params: [
+                    { name: 'q', type: 'query', required: true, description: 'Termo de busca ou ID do TMDB' }
+                ]
+            },
+            {
+                method: 'GET',
+                path: '/api/{projectid}/stream-direct/{streamId}',
+                description: 'Retorna o stream direto de um filme.',
+                authRequired: false,
+                params: [
+                    { name: 'streamId', type: 'path', required: true, description: 'ID do stream' }
+                ]
+            },
+            {
+                method: 'GET',
+                path: '/api/{projectid}/tmdb-to-stream/{tmdbId}',
+                description: 'Converte um ID do TMDB para um stream ID.',
+                authRequired: false,
+                params: [
+                    { name: 'tmdbId', type: 'path', required: true, description: 'ID do filme no TMDB' }
+                ]
+            },
+            {
+                method: 'GET',
+                path: '/api/{projectid}/get-movie-title/{streamId}',
+                description: 'Obtém o título de um filme pelo stream ID.',
+                authRequired: false,
+                params: [
+                    { name: 'streamId', type: 'path', required: true, description: 'ID do stream' }
+                ]
+            }
+        ];
+
+        endpointsContainer.innerHTML = endpoints.map(endpoint => `
+            <div class="gate-card overflow-hidden">
+                <div class="bg-blue-900 bg-opacity-30 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between">
+                    <div class="flex items-center mb-2 sm:mb-0">
+                        <span class="inline-block ${getMethodColorClass(endpoint.method)} text-white font-semibold text-xs sm:text-sm rounded px-2 py-1 mr-2">${endpoint.method}</span>
+                        <span class="font-mono text-sm sm:text-base">${endpoint.path}</span>
+                    </div>
+                </div>
+                <div class="px-4 sm:px-6 py-3">
+                    <p class="text-sm mb-3">${endpoint.description}</p>
+                    
+                    ${endpoint.params.length > 0 ? `
+                        <p class="text-xs text-gray-400 mb-1"><strong>Parâmetros:</strong></p>
+                        <ul class="list-disc list-inside text-xs text-gray-400 pl-2 mb-3">
+                            ${endpoint.params.map(param => `
+                                <li>
+                                    <span class="font-mono">${param.name}</span> (${param.type}): ${param.description}
+                                    ${param.required ? '<span class="text-red-400">*</span>' : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    ` : ''}
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs text-gray-400">
+                            <i class="bi bi-shield-check ${endpoint.authRequired ? 'text-red-400' : 'text-green-400'} mr-1"></i> 
+                            ${endpoint.authRequired ? 'Requer autenticação' : 'Não requer autenticação'}
+                        </p>
+                        <button class="copy-button text-xs bg-blue-900 text-blue-300 px-3 py-1 rounded hover:bg-blue-800 transition">
+                            <i class="bi bi-clipboard mr-1"></i> Copiar URL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        setupCopyButtons();
+    }
+
+    function getMethodColorClass(method) {
+        switch(method) {
+            case 'GET': return 'method-get';
+            case 'POST': return 'method-post';
+            case 'PUT': return 'method-put';
+            case 'DELETE': return 'method-delete';
+            default: return 'bg-gray-500';
+        }
+    }
+
+    // Atualizar UI com informações do projeto
     function updateUI() {
         if (!currentProject) return;
         
-        // Informações básicas
-        document.getElementById('gateName').textContent = currentProject.name || 'Sem nome';
-        document.getElementById('gateId').textContent = currentProject.project_id;
-        document.getElementById('gateCreated').textContent = 
-            new Date(currentProject.created_at).toLocaleDateString();
+        // Nome do projeto
+        const projectNameElement = document.querySelector('.project-name strong');
+        if (projectNameElement) {
+            projectNameElement.textContent = currentProject.name || 'Shadow Gate API';
+        }
         
-        // Nível e progresso
-        document.getElementById('gateLevel').textContent = currentProject.level || 1;
-        document.getElementById('requestsToNextLevel').textContent = 
-            Math.max(0, 100 - (currentProject.total_requests % 100));
+        // Informações do gate
+        document.getElementById('gateId').textContent = `GATE ID: ${currentProject.project_id}`;
         
-        // Endpoint
-        document.getElementById('apiEndpoint').textContent = 
-            `${window.location.origin}/api/${currentProject.project_id}`;
+        // Estatísticas
+        document.getElementById('totalRequests').textContent = currentProject.total_requests?.toLocaleString() || '0';
+        document.getElementById('level').textContent = currentProject.level || '1';
         
-        // Atualizar snippets de código
-        document.querySelectorAll('#snippetProjectId, #snippetProjectId2').forEach(el => {
-            el.textContent = currentProject.project_id;
-        });
+        // Barra de progresso
+        const progress = (currentProject.total_requests % 100) || 0;
+        document.getElementById('levelBar').style.width = `${progress}%`;
+        
+        // Criar cards de endpoint
+        createEndpointCards();
     }
 
     // Configurar eventos
     function setupEventListeners() {
-        // Botões de timeframe
-        document.querySelectorAll('.timeframe-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Lógica simplificada - pode ser expandida
-                initChart();
-            });
-        });
-
         // Botão de voltar
         document.getElementById('backButton').addEventListener('click', () => {
             window.location.href = 'home.html';
         });
 
-        // Botões de copiar
-        document.querySelectorAll('.copy-button, .copy-snippet').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const textToCopy = e.target.closest('button').previousElementSibling.textContent;
-                navigator.clipboard.writeText(textToCopy);
-                showAlert('Copied to clipboard!', 'success');
-            });
+        // Menu toggle
+        document.getElementById('menuToggle').addEventListener('click', function() {
+            const menu = document.getElementById('menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
         });
 
-        // Navegação por abas
-        document.querySelectorAll('.tab-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tabId = link.getAttribute('data-tab');
-                
-                // Atualizar aba ativa
-                document.querySelectorAll('.tab-link').forEach(l => {
-                    l.classList.remove('border-blue-400', 'text-blue-400');
-                    l.classList.add('border-transparent', 'text-gray-400');
-                });
-                
-                link.classList.add('border-blue-400', 'text-blue-400');
-                link.classList.remove('border-transparent', 'text-gray-400');
-                
-                // Mostrar conteúdo da aba
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(tabId).classList.add('active');
+        // Funções do menu
+        window.showAbout = function() {
+            alert('Sobre: Shadow Gate API\nVersão 1.0\nProjeto: ' + (currentProject?.name || 'N/A'));
+        };
+
+        window.exit = function() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = 'login.html';
             });
+        };
+
+        // Rodapé interativo
+        document.querySelector('footer div:nth-child(1)').addEventListener('click', () => {
+            window.location.href = 'home.html';
         });
+        document.querySelector('footer div:nth-child(2)').addEventListener('click', () => {
+            window.location.href = 'dashboard.html?project=' + currentProject.project_id;
+        });
+        document.querySelector('footer div:nth-child(3)').addEventListener('click', exit);
     }
 
     // Inicialização
@@ -179,7 +232,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             currentProject = await loadProject();
             
             updateUI();
-            initChart();
             setupEventListeners();
 
         } catch (error) {
