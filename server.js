@@ -2,23 +2,17 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const NodeCache = require('node-cache');
-const compression = require('compression');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Configuração do cache em memória
-const memoryCache = new NodeCache({
-  stdTTL: 3600, // 1 hora
-  checkperiod: 600 // Verifica a cada 10 minutos
-});
-
 // Configurações do Supabase
-const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+  'https://nwoswxbtlquiekyangbs.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE'
+);
 
+// Configurações do Xtream
 const XTREAM_CONFIG = {
   host: 'sigcine1.space',
   port: 80,
@@ -26,176 +20,94 @@ const XTREAM_CONFIG = {
   password: '355591139'
 };
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(compression()); // Ativa compressão para todas as rotas
-
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
-});
-
-const requestTracker = {
-  requests: new Map(),
-  track: function(projectId, endpoint) {
-    const now = Date.now();
-    const key = `${projectId}_${endpoint}`;
-    if (!this.requests.has(key)) this.requests.set(key, []);
-    this.requests.get(key).push(now);
-  },
-  getCount: function(projectId, endpoint) {
-    const key = `${projectId}_${endpoint}`;
-    return this.requests.has(key) ? this.requests.get(key).length : 0;
-  }
+// Cache em memória
+const memoryCache = {
+  movies: null,
+  series: null,
+  lastUpdated: null,
+  projects: new Map()
 };
 
-// Middleware de verificação de projeto com cache
+// Middlewares
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Atualizar cache
+async function updateCache() {
+  try {
+    console.log('Atualizando cache...');
+    
+    const [moviesRes, seriesRes] = await Promise.all([
+      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`),
+      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series`)
+    ]);
+
+    memoryCache.movies = await moviesRes.json();
+    memoryCache.series = await seriesRes.json();
+    memoryCache.lastUpdated = new Date();
+    
+    console.log('Cache atualizado com sucesso!');
+  } catch (err) {
+    console.error('Erro ao atualizar cache:', err);
+  }
+}
+
+// Verificar projeto
 async function verifyProject(req, res, next) {
   const projectId = req.params.id;
+  
   try {
-    const cacheKey = `project_${projectId}`;
-    const cachedProject = memoryCache.get(cacheKey);
-    
-    if (cachedProject) {
-      req.project = cachedProject;
-      req.isPremium = cachedProject.is_premium || false;
+    // Verificar cache primeiro
+    if (memoryCache.projects.has(projectId)) {
+      const project = memoryCache.projects.get(projectId);
+      req.isPremium = project.is_premium;
       return next();
     }
 
     const { data: project, error } = await supabase
       .from('user_projects')
-      .select('*')
+      .select('is_premium')
       .eq('project_id', projectId)
       .single();
 
     if (error || !project) {
-      return res.status(404).json({ status: 'error', error: 'Project not found' });
+      return res.status(404).json({ error: 'Projeto não encontrado' });
     }
 
-    req.project = project;
-    req.isPremium = project.is_premium || false;
-    
-    memoryCache.set(cacheKey, project);
+    // Armazenar no cache
+    memoryCache.projects.set(projectId, project);
+    req.isPremium = project.is_premium;
     next();
   } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error' });
+    res.status(500).json({ error: 'Erro ao verificar projeto' });
   }
 }
 
-// Função para pré-carregar dados premium
-async function preloadPremiumData() {
-  try {
-    console.log('[Premium] Iniciando pré-carregamento de dados...');
-    
-    const { data: premiumProjects, error } = await supabase
-      .from('user_projects')
-      .select('project_id')
-      .eq('is_premium', true);
-
-    if (error || !premiumProjects.length) {
-      return console.log('[Premium] Nenhum projeto premium encontrado');
-    }
-
-    // Carrega filmes uma vez para todos os projetos
-    const moviesUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`;
-    const moviesResponse = await fetch(moviesUrl);
-    if (moviesResponse.ok) {
-      const filmesData = await moviesResponse.json();
-      memoryCache.set('all_movies', filmesData);
-      console.log(`[Premium] ${filmesData.length} filmes carregados`);
-    }
-    
-    // Carrega séries uma vez para todos os projetos
-    const seriesUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series`;
-    const seriesResponse = await fetch(seriesUrl);
-    if (seriesResponse.ok) {
-      const seriesData = await seriesResponse.json();
-      memoryCache.set('all_series', seriesData);
-      console.log(`[Premium] ${seriesData.length} séries carregadas`);
-    }
-    
-    console.log('[Premium] Pré-carregamento concluído!');
-  } catch (err) {
-    console.error('[Premium] Erro no pré-carregamento:', err);
-  }
-}
-
-// Função para formatar dados de filmes
-function formatMovieData(movie) {
-  return {
-    id: movie.id,
-    title: movie.title,
-    original_title: movie.original_title,
-    overview: movie.overview,
-    poster_path: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
-    backdrop_path: movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
-    release_date: movie.release_date,
-    vote_average: movie.vote_average,
-    genres: movie.genres ? movie.genres.map(g => g.name) : [],
-    runtime: movie.runtime,
-    adult: movie.adult,
-    tmdb_url: `https://www.themoviedb.org/movie/${movie.id}`
-  };
-}
-
-// Rotas originais com otimizações premium
-
-app.get('/api/:id/get-movie-title/:streamId', verifyProject, async (req, res) => {
-    try {
-        const streamId = req.params.streamId;
-        const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_info&vod_id=${streamId}`;
-        const apiResponse = await fetch(apiUrl);
-        
-        if (!apiResponse.ok) {
-            return res.json({ status: 'error', error: 'Failed to fetch movie info' });
-        }
-        
-        const movieInfo = await apiResponse.json();
-        res.json({
-            status: 'success',
-            title: movieInfo.name || movieInfo.title || 'Filme',
-            streamId
-        });
-    } catch (err) {
-        res.json({ status: 'error', error: err.message });
-    }
-});
-
+// Rotas de filmes
 app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
-    await incrementRequestCount(projectId, 'filmes');
-    requestTracker.track(projectId, 'filmes');
     
-    // Rota ultra-rápida para premium
-    if (req.isPremium) {
-      const cachedMovies = memoryCache.get('all_movies');
-      if (cachedMovies) {
-        const filmesComLinks = cachedMovies.map(filme => ({
-          ...filme,
-          player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&streamId=${filme.stream_id}`,
-          stream_icon: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${filme.stream_id}`
-        }));
-        
-        return res.json({
-          status: 'success',
-          projectId,
-          timestamp: new Date().toISOString(),
-          requestCount: requestTracker.getCount(projectId, 'filmes'),
-          data: filmesComLinks,
-          fromMemoryCache: true,
-          performance: 'ultra-fast'
-        });
-      }
+    // Se for premium e tiver cache, retornar rápido
+    if (req.isPremium && memoryCache.movies) {
+      const filmesComLinks = memoryCache.movies.map(filme => ({
+        ...filme,
+        player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&streamId=${filme.stream_id}`,
+        stream_icon: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${filme.stream_id}`
+      }));
+      
+      return res.json({
+        status: 'success',
+        data: filmesComLinks,
+        cached: true,
+        lastUpdated: memoryCache.lastUpdated
+      });
     }
 
-    // Rota normal para não-premium
-    const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`;
-    const apiResponse = await fetch(apiUrl);
-    if (!apiResponse.ok) throw new Error('Failed to fetch movies data');
-    const filmesData = await apiResponse.json();
+    // Se não for premium, buscar normalmente
+    const response = await fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`);
+    const filmesData = await response.json();
+    
     const filmesComLinks = filmesData.map(filme => ({
       ...filme,
       player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&streamId=${filme.stream_id}`,
@@ -204,192 +116,36 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
 
     res.json({
       status: 'success',
-      projectId,
-      timestamp: new Date().toISOString(),
-      requestCount: requestTracker.getCount(projectId, 'filmes'),
-      data: filmesComLinks,
-      performance: 'normal'
+      data: filmesComLinks
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
-  try {
-    const projectId = req.params.id;
-    const query = req.query.q;
-    
-    if (!query) {
-      return res.status(400).json({ 
-        status: 'error',
-        error: 'Parâmetro de busca "q" é obrigatório' 
-      });
-    }
-
-    await incrementRequestCount(projectId, 'filmes_search');
-
-    if (!isNaN(query)) {
-      const tmdbResponse = await fetch(
-        `https://api.themoviedb.org/3/movie/${query}?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR`
-      );
-      
-      if (!tmdbResponse.ok) {
-        return res.status(404).json({ 
-          status: 'error',
-          error: 'Filme não encontrado no TMDB' 
-        });
-      }
-
-      const filme = await tmdbResponse.json();
-      return res.json({
-        status: 'success',
-        projectId,
-        searchType: 'id',
-        data: {
-          ...formatMovieData(filme),
-          player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&tmdbId=${filme.id}`
-        }
-      });
-    }
-
-    const tmdbSearchResponse = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR&query=${encodeURIComponent(query)}`
-    );
-
-    if (!tmdbSearchResponse.ok) {
-      throw new Error('Falha ao buscar filmes no TMDB');
-    }
-
-    const searchData = await tmdbSearchResponse.json();
-    
-    const resultadosFiltrados = searchData.results
-      .filter(movie => 
-        movie.title.toLowerCase().includes(query.toLowerCase()) ||
-        (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
-      )
-      .map(movie => ({
-        ...formatMovieData(movie),
-        player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&tmdbId=${movie.id}`
-      }));
-
-    res.json({
-      status: 'success',
-      projectId,
-      searchType: 'nome',
-      query,
-      resultsCount: resultadosFiltrados.length,
-      data: resultadosFiltrados
-    });
-
-  } catch (err) {
-    res.status(500).json({ 
-      status: 'error',
-      error: 'Erro na busca de filmes',
-      details: err.message 
-    });
-  }
-});
-
-app.get('/api/:id/stream/:streamId', verifyProject, async (req, res) => {
-  try {
-    const streamId = req.params.streamId;
-    const projectId = req.params.id;
-    res.redirect(`/player.html?projectId=${projectId}&streamId=${streamId}`);
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Stream error' });
-  }
-});
-
-app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
-  try {
-    const streamId = req.params.streamId;
-    const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
-    const streamResponse = await fetch(realStreamUrl);
-    if (!streamResponse.ok) return res.status(404).json({ status: 'error', error: 'Stream not found' });
-    res.set({ 
-      'Content-Type': 'video/mp4', 
-      'Cache-Control': 'no-store',
-      'Accept-Ranges': 'bytes'
-    });
-    streamResponse.body.pipe(res);
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Stream error' });
-  }
-});
-
-app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
-  try {
-    const tmdbId = req.params.tmdbId;
-    const streamId = await findStreamIdByTmdbId(tmdbId);
-    
-    if (!streamId) {
-      return res.status(404).json({ status: 'error', error: 'Stream not found for this TMDB ID' });
-    }
-    
-    res.json({
-      status: 'success',
-      projectId: req.params.id,
-      tmdbId,
-      streamId,
-      streamUrl: `${req.protocol}://${req.get('host')}/player.html?projectId=${req.params.id}&streamId=${streamId}`
-    });
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: err.message });
-  }
-});
-
-async function findStreamIdByTmdbId(tmdbId) {
-  return tmdbId;
-}
-
-app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
-  try {
-    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
-      <rect width="100" height="100" fill="#ddd"/>
-      <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
-    </svg>`;
-    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
-    res.send(svgIcon);
-  } catch (err) {
-    res.status(500).send('Icon error');
-  }
-});
-
+// Rotas de séries
 app.get('/api/:id/series', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
-    await incrementRequestCount(projectId, 'series');
-    requestTracker.track(projectId, 'series');
-
-    // Rota ultra-rápida para premium
-    if (req.isPremium) {
-      const cachedSeries = memoryCache.get('all_series');
-      if (cachedSeries) {
-        const seriesComLinks = cachedSeries.map(serie => ({
-          ...serie,
-          player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&seriesId=${serie.series_id}`,
-          cover: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${serie.series_id}`
-        }));
-        
-        return res.json({
-          status: 'success',
-          projectId,
-          timestamp: new Date().toISOString(),
-          requestCount: requestTracker.getCount(projectId, 'series'),
-          data: seriesComLinks,
-          fromMemoryCache: true,
-          performance: 'ultra-fast'
-        });
-      }
+    
+    if (req.isPremium && memoryCache.series) {
+      const seriesComLinks = memoryCache.series.map(serie => ({
+        ...serie,
+        player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&seriesId=${serie.series_id}`,
+        cover: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${serie.series_id}`
+      }));
+      
+      return res.json({
+        status: 'success',
+        data: seriesComLinks,
+        cached: true,
+        lastUpdated: memoryCache.lastUpdated
+      });
     }
 
-    // Rota normal para não-premium
-    const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series`;
-    const apiResponse = await fetch(apiUrl);
-    if (!apiResponse.ok) throw new Error('Failed to fetch series data');
-
-    const seriesData = await apiResponse.json();
+    const response = await fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series`);
+    const seriesData = await response.json();
+    
     const seriesComLinks = seriesData.map(serie => ({
       ...serie,
       player: `${req.protocol}://${req.get('host')}/player.html?projectId=${projectId}&seriesId=${serie.series_id}`,
@@ -398,29 +154,20 @@ app.get('/api/:id/series', verifyProject, async (req, res) => {
 
     res.json({
       status: 'success',
-      projectId,
-      timestamp: new Date().toISOString(),
-      requestCount: requestTracker.getCount(projectId, 'series'),
-      data: seriesComLinks,
-      performance: 'normal'
+      data: seriesComLinks
     });
-
   } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
+// Rotas de temporadas e episódios
 app.get('/api/:id/series/:seriesId/seasons', verifyProject, async (req, res) => {
   try {
-    const { id: projectId, seriesId } = req.params;
-    await incrementRequestCount(projectId, 'series_seasons');
-    requestTracker.track(projectId, 'series_seasons');
-
-    const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series_info&series_id=${seriesId}`;
-    const apiResponse = await fetch(apiUrl);
-    if (!apiResponse.ok) throw new Error('Failed to fetch series info');
-
-    const seriesInfo = await apiResponse.json();
+    const { seriesId } = req.params;
+    const response = await fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series_info&series_id=${seriesId}`);
+    const seriesInfo = await response.json();
+    
     const seasons = seriesInfo.episodes ? Object.keys(seriesInfo.episodes).map(seasonNumber => ({
       season: seasonNumber,
       episodesCount: seriesInfo.episodes[seasonNumber].length
@@ -428,164 +175,37 @@ app.get('/api/:id/series/:seriesId/seasons', verifyProject, async (req, res) => 
 
     res.json({
       status: 'success',
-      projectId,
-      seriesId,
-      seasons
-    });
-
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
-  }
-});
-
-app.get('/api/:id/series/:seriesId/season/:seasonNumber', verifyProject, async (req, res) => {
-  try {
-    const { id: projectId, seriesId, seasonNumber } = req.params;
-    await incrementRequestCount(projectId, 'series_episodes');
-    requestTracker.track(projectId, 'series_episodes');
-
-    const apiUrl = `http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series_info&series_id=${seriesId}`;
-    const apiResponse = await fetch(apiUrl);
-    if (!apiResponse.ok) throw new Error('Failed to fetch series info');
-
-    const seriesInfo = await apiResponse.json();
-    const episodes = (seriesInfo.episodes && seriesInfo.episodes[seasonNumber]) ? seriesInfo.episodes[seasonNumber] : [];
-
-    const episodesFormatted = episodes.map(ep => ({
-      id: ep.id,
-      title: ep.title,
-      episode_num: ep.episode_num,
-      stream_url: `${req.protocol}://${req.get('host')}/api/${projectId}/stream-direct/${ep.id}`,
-      duration: ep.duration,
-      info: ep.info || {},
-      directUrl: `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/series/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${ep.id}.mp4`
-    }));
-
-    res.json({
-      status: 'success',
-      projectId,
-      seriesId,
-      seasonNumber,
-      episodes: episodesFormatted
-    });
-
-  } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
-  }
-});
-
-app.get('/api/:id/animes', verifyProject, async (req, res) => {
-  try {
-    const projectId = req.params.id;
-    const incrementResult = await incrementRequestCount(projectId, 'animes');
-    requestTracker.track(projectId, 'animes');
-    const { data: projectData } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('project_id', projectId)
-      .single();
-    res.json({
-      status: 'success',
-      projectId,
-      timestamp: new Date().toISOString(),
-      incrementResult,
-      requestCount: requestTracker.getCount(projectId, 'animes'),
-      dbData: projectData,
-      data: generateAnimeData(projectId)
+      data: seasons
     });
   } catch (err) {
-    res.status(500).json({ status: 'error', error: 'Internal server error', details: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-function generateAnimeData(projectId) {
-  const baseAnimes = [
-    { id: 1, title: "Attack on Titan", episodes: 75, year: 2013 },
-    { id: 2, title: "Demon Slayer", episodes: 44, year: 2019 },
-    { id: 3, title: "Jujutsu Kaisen", episodes: 24, year: 2020 }
-  ];
-  const hash = projectId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return baseAnimes.map(anime => ({
-    ...anime,
-    episodes: anime.episodes + (hash % 5),
-    year: anime.year + (hash % 3),
-    rating: (3.5 + (hash % 5 * 0.3)).toFixed(1),
-    projectSpecific: `custom-${projectId.slice(0, 3)}-${anime.id}`
-  }));
-}
-
-app.get('/api/test/:id', async (req, res) => {
+// Stream direto
+app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
   try {
-    await incrementRequestCount(req.params.id, 'test');
-    const { data } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('project_id', req.params.id)
-      .single();
-    res.json({ status: 'success', data: data || { error: 'No data found' } });
+    const { streamId } = req.params;
+    const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
+    
+    res.redirect(realStreamUrl);
   } catch (err) {
-    res.status(500).json({ status: 'error', error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
+// Player
 app.get('/player.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'player.html'));
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Inicia o servidor e o pré-carregamento
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  preloadPremiumData(); // Inicia o pré-carregamento
+// Iniciar servidor
+app.listen(port, async () => {
+  console.log(`Servidor rodando na porta ${port}`);
   
-  // Atualiza os dados a cada 30 minutos para premium
-  setInterval(preloadPremiumData, 1800000);
+  // Pré-carregar dados
+  await updateCache();
+  
+  // Atualizar cache a cada 30 minutos
+  setInterval(updateCache, 1800000);
 });
-
-// Função para incrementar contagem de requisições (mantida original)
-async function incrementRequestCount(projectId, endpointType) {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    const { data: currentData, error: fetchError } = await supabase
-      .from('user_projects')
-      .select('*')
-      .eq('project_id', projectId)
-      .single();
-    if (fetchError || !currentData) {
-      const { error: createError } = await supabase
-        .from('user_projects')
-        .insert({
-          project_id: projectId,
-          requests_today: 1,
-          total_requests: 1,
-          last_request_date: today,
-          daily_requests: { [today]: 1 },
-          level: 1,
-          last_endpoint: endpointType
-        });
-      if (createError) throw createError;
-      return { status: 'created' };
-    }
-    const updateData = {
-      requests_today: currentData.requests_today + 1,
-      total_requests: currentData.total_requests + 1,
-      last_request_date: today,
-      daily_requests: { ...currentData.daily_requests }
-    };
-    updateData.daily_requests[today] = (updateData.daily_requests[today] || 0) + 1;
-    if (updateData.total_requests >= (currentData.level * 100)) {
-      updateData.level = currentData.level + 1;
-    }
-    const { error: updateError } = await supabase
-      .from('user_projects')
-      .update(updateData)
-      .eq('project_id', projectId);
-    if (updateError) throw updateError;
-    return { status: 'updated' };
-  } catch (error) {
-    throw error;
-  }
-  }
