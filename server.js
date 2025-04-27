@@ -1,7 +1,12 @@
-const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
-const path = require('path');
-const fetch = require('node-fetch');
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
+
+// Configuração do __dirname para ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,7 +72,6 @@ async function isPremium(projectId) {
   return false;
 }
 
-// 🎬 Rotas de Filmes
 app.get('/api/:id/filmes', async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -109,7 +113,6 @@ app.get('/api/:id/filmes/q', async (req, res) => {
   }
 });
 
-// 📺 Rotas de Séries
 app.get('/api/:id/series', async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -154,7 +157,6 @@ app.get('/api/:id/series/:seriesId/season/:seasonNumber', async (req, res) => {
   }
 });
 
-// ▶️ Rotas de Streaming
 app.get('/api/:id/stream-direct/:streamId', async (req, res) => {
   try {
     const { streamId } = req.params;
@@ -168,7 +170,6 @@ app.get('/player.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'player.html'));
 });
 
-// 🏠 Rota Principal
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
