@@ -4,223 +4,221 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 
+// Configuração do diretório
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const VERSION = '1.0.0'; // <--- versão da API
-const START_TIME = Date.now(); // <--- tempo que o servidor iniciou
 
+// Configurações do Supabase
 const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://nwoswxbtlquiekyangbs.supabase.co',
-  process.env.SUPABASE_KEY || 'YOUR_SUPABASE_KEY'
+  'https://nwoswxbtlquiekyangbs.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE'
 );
 
+// Configurações Xtream
 const XTREAM_CONFIG = {
-  host: process.env.XTREAM_HOST || 'sigcine1.space',
-  port: process.env.XTREAM_PORT || 80,
-  username: process.env.XTREAM_USER || '474912714',
-  password: process.env.XTREAM_PASS || '355591139'
+  host: 'sigcine1.space',
+  port: 80,
+  username: '898333270',
+  password: '473536847'
 };
 
+// Sistema de Cache
 const cache = {
   movies: null,
   series: null,
-  projects: new Map()
+  liveTv: null,
+  movieCategories: null,
+  seriesCategories: null,
+  liveCategories: null,
+  lastUpdated: null
 };
 
-async function loadCache() {
+// Atualiza todos os caches
+async function updateAllCache() {
   try {
-    const { data: projects } = await supabase
-      .from('user_projects')
-      .select('project_id, is_premium')
-      .eq('is_premium', true);
-
-    cache.projects.clear();
-    projects.forEach(p => cache.projects.set(p.project_id, true));
-
-    const [moviesRes, seriesRes] = await Promise.all([
+    console.log('Atualizando cache...');
+    const [
+      moviesRes, 
+      seriesRes, 
+      liveRes, 
+      movieCatRes, 
+      seriesCatRes, 
+      liveCatRes
+    ] = await Promise.all([
       fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`),
-      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series`)
+      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series`),
+      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_live_streams`),
+      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_categories`),
+      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series_categories`),
+      fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_live_categories`)
     ]);
 
     cache.movies = await moviesRes.json();
     cache.series = await seriesRes.json();
-
-    console.log('Cache atualizado');
+    cache.liveTv = await liveRes.json();
+    cache.movieCategories = await movieCatRes.json();
+    cache.seriesCategories = await seriesCatRes.json();
+    cache.liveCategories = await liveCatRes.json();
+    cache.lastUpdated = new Date();
+    console.log('Cache atualizado com sucesso!');
   } catch (err) {
-    console.error('Erro ao carregar cache:', err);
+    console.error('Erro ao atualizar cache:', err);
   }
 }
 
-setInterval(loadCache, 5 * 60 * 1000); // Atualiza cache a cada 5 minutos
-loadCache();
-
+// Middlewares
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Função para verificar premium
-async function isPremium(projectId) {
-  if (cache.projects.has(projectId)) return true;
+// Rotas da API
 
-  const { data: project } = await supabase
-    .from('user_projects')
-    .select('is_premium')
-    .eq('project_id', projectId)
-    .single();
-
-  if (project?.is_premium) {
-    cache.projects.set(projectId, true);
-    return true;
-  }
-
-  return false;
-}
-
-// Rotas principais
-app.get('/api/:id/filmes', async (req, res) => {
+// 1. Rotas de Filmes
+app.get('/api/movies', async (req, res) => {
   try {
-    const projectId = req.params.id;
-    const premium = await isPremium(projectId);
-
-    if (premium && cache.movies) {
-      return res.json({
-        data: cache.movies.map(m => ({
-          ...m,
-          stream_url: `${req.protocol}://${req.get('host')}/stream/movie/${m.stream_id}`
-        })),
-        cached: true
-      });
-    }
-
-    const response = await fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_vod_streams`);
-    const movies = await response.json();
-
+    if (!cache.movies) await updateAllCache();
     res.json({
-      data: movies.map(m => ({
-        ...m,
-        stream_url: `${req.protocol}://${req.get('host')}/stream/movie/${m.stream_id}`
-      }))
+      status: 'success',
+      data: cache.movies,
+      lastUpdated: cache.lastUpdated
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ status: 'error', error: err.message });
   }
 });
 
-app.get('/api/:id/series', async (req, res) => {
+app.get('/api/movies/categories', async (req, res) => {
   try {
-    const projectId = req.params.id;
-    const premium = await isPremium(projectId);
-
-    if (premium && cache.series) {
-      return res.json({
-        data: cache.series.map(s => ({
-          ...s,
-          details_url: `${req.protocol}://${req.get('host')}/api/${projectId}/series/${s.series_id}`
-        })),
-        cached: true
-      });
-    }
-
-    const response = await fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series`);
-    const series = await response.json();
-
+    if (!cache.movieCategories) await updateAllCache();
     res.json({
-      data: series.map(s => ({
-        ...s,
-        details_url: `${req.protocol}://${req.get('host')}/api/${projectId}/series/${s.series_id}`
-      }))
+      status: 'success',
+      data: cache.movieCategories,
+      lastUpdated: cache.lastUpdated
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ status: 'error', error: err.message });
   }
 });
 
-app.get('/api/:id/series/:seriesId', async (req, res) => {
+app.get('/api/movies/category/:id', async (req, res) => {
   try {
-    const { seriesId } = req.params;
-    const response = await fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_series_info&series_id=${seriesId}`);
-    const data = await response.json();
-
-    if (!data.episodes) return res.status(404).json({ error: 'Nenhum episódio encontrado' });
-
-    const seasons = Object.keys(data.episodes).map(season => ({
-      season,
-      episodes: data.episodes[season].map(episode => ({
-        ...episode,
-        stream_url: `${req.protocol}://${req.get('host')}/stream/series/${seriesId}/season/${season}/episode/${episode.id}`
-      }))
-    }));
-
-    res.json({ data: seasons });
+    if (!cache.movies) await updateAllCache();
+    const movies = cache.movies.filter(m => m.category_id == req.params.id);
+    res.json({ status: 'success', data: movies });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ status: 'error', error: err.message });
   }
 });
 
-// Rota de stream movie
-app.get('/stream/movie/:streamId', (req, res) => {
-  const { streamId } = req.params;
-  const url = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
-  res.redirect(url);
-});
-
-// Rota de stream série
-app.get('/stream/series/:seriesId/season/:season/episode/:episodeId', (req, res) => {
-  const { episodeId } = req.params;
-  const url = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/series/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${episodeId}.mp4`;
-  res.redirect(url);
-});
-
-// ROTAS NOVAS DE STATUS / CONTROLE
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    uptime: `${Math.floor((Date.now() - START_TIME) / 1000)}s`,
-    cache: {
-      movies_loaded: !!cache.movies,
-      series_loaded: !!cache.series,
-      projects_loaded: cache.projects.size
-    }
-  });
-});
-
-// Informações sobre API
-app.get('/info', (req, res) => {
-  res.json({
-    name: 'Xtream API Server',
-    description: 'Servidor de filmes e séries via Xtream API + Supabase',
-    version: VERSION,
-    started_at: new Date(START_TIME).toISOString()
-  });
-});
-
-// Versão rápida
-app.get('/version', (req, res) => {
-  res.json({ version: VERSION });
-});
-
-// Forçar atualização do cache
-app.post('/cache/refresh', (req, res) => {
-  const secret = req.query.secret || '';
-  
-  // Proteção básica
-  if (secret !== (process.env.CACHE_REFRESH_SECRET || 'admin123')) {
-    return res.status(403).json({ error: 'Acesso negado' });
+// 2. Rotas de Séries
+app.get('/api/series', async (req, res) => {
+  try {
+    if (!cache.series) await updateAllCache();
+    res.json({
+      status: 'success',
+      data: cache.series,
+      lastUpdated: cache.lastUpdated
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
   }
-
-  loadCache()
-    .then(() => res.json({ message: 'Cache atualizado com sucesso' }))
-    .catch(err => res.status(500).json({ error: err.message }));
 });
 
-// Rota padrão para 404
-app.use((req, res) => {
-  res.status(404).send('Rota não encontrada');
+app.get('/api/series/categories', async (req, res) => {
+  try {
+    if (!cache.seriesCategories) await updateAllCache();
+    res.json({
+      status: 'success',
+      data: cache.seriesCategories,
+      lastUpdated: cache.lastUpdated
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+// 3. Rotas de TV Ao Vivo
+app.get('/api/live', async (req, res) => {
+  try {
+    if (!cache.liveTv) await updateAllCache();
+    res.json({
+      status: 'success',
+      data: cache.liveTv,
+      lastUpdated: cache.lastUpdated
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+app.get('/api/live/categories', async (req, res) => {
+  try {
+    if (!cache.liveCategories) await updateAllCache();
+    res.json({
+      status: 'success',
+      data: cache.liveCategories,
+      lastUpdated: cache.lastUpdated
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+app.get('/api/live/category/:id', async (req, res) => {
+  try {
+    if (!cache.liveTv) await updateAllCache();
+    const channels = cache.liveTv.filter(c => c.category_id == req.params.id);
+    res.json({ status: 'success', data: channels });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// 4. Rotas de Stream
+app.get('/api/stream/movie/:id', (req, res) => {
+  const streamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${req.params.id}.mp4`;
+  res.redirect(streamUrl);
+});
+
+app.get('/api/stream/live/:id.m3u8', (req, res) => {
+  const streamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${req.params.id}/index.m3u8`;
+  res.redirect(streamUrl);
+});
+
+app.get('/api/stream/series/:id', (req, res) => {
+  const streamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/series/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${req.params.id}.mp4`;
+  res.redirect(streamUrl);
+});
+
+// 5. Rotas de Informação
+app.get('/api/info', async (req, res) => {
+  try {
+    const response = await fetch(`http://${XTREAM_CONFIG.host}/player_api.php?username=${XTREAM_CONFIG.username}&password=${XTREAM_CONFIG.password}&action=get_user_info`);
+    res.json({ status: 'success', data: await response.json() });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
+// 6. Rotas do Player
+app.get('/player', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'player.html'));
+});
+
+// 7. Rota principal
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Atualiza cache a cada 5 minutos
+setInterval(updateAllCache, 5 * 60 * 1000);
+
+// Inicialização
+updateAllCache().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Acesse: http://localhost:${PORT}`);
+  });
 });
