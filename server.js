@@ -6,16 +6,23 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const app = express();
 const port = process.env.PORT || 3000;
 
-const supabaseUrl = 'https://nwoswxbtlquiekyangbs.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53b3N3eGJ0bHF1aWVreWFuZ2JzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODEwMjcsImV4cCI6MjA2MDM1NzAyN30.KarBv9AopQpldzGPamlj3zu9eScKltKKHH2JJblpoCE';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const XTREAM_CONFIG = {
-  host: 'sigcine1.space',
-  port: 80,
-  username: '474912714',
-  password: '355591139'
+  host: process.env.XTREAM_HOST,
+  port: process.env.XTREAM_PORT || 80,
+  username: process.env.XTREAM_USERNAME,
+  password: process.env.XTREAM_PASSWORD
 };
+
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
+
+if (!supabaseUrl || !supabaseKey || !XTREAM_CONFIG.host || !XTREAM_CONFIG.username || !XTREAM_CONFIG.password || !TMDB_API_KEY) {
+  console.error('Erro: Variáveis de ambiente necessárias não configuradas!');
+  process.exit(1);
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -114,12 +121,14 @@ function formatMovieData(movie) {
     genres: movie.genres ? movie.genres.map(g => g.name) : [],
     runtime: movie.runtime,
     adult: movie.adult,
-    tmdb_url: `https://www.themoviedb.org/movie/${movie.id}`
+    tmdb_url: `https://www.themoviedb.org/movie/${movie.id}`,
+    stream_icon: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
+    banner: movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
+    cover: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null
   };
 }
 
-// Listar filmes
-app.get('/api/:id/filmes', verifyProject, async (req, res) => {
+app.get('/:id/filmes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
     await incrementRequestCount(projectId, 'filmes');
@@ -131,7 +140,7 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
     const filmesComLinks = filmesData.map(filme => ({
       ...filme,
       stream_url: `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${filme.stream_id}.mp4`,
-      stream_icon: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${filme.stream_id}`
+      stream_icon: filme.tmdb_id ? `https://image.tmdb.org/t/p/w500${filme.poster_path}` : `${req.protocol}://${req.get('host')}/${projectId}/icon/${filme.stream_id}`
     }));
     res.json({
       status: 'success',
@@ -145,8 +154,7 @@ app.get('/api/:id/filmes', verifyProject, async (req, res) => {
   }
 });
 
-// Buscar filmes
-app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
+app.get('/:id/filmes/q', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
     const query = req.query.q;
@@ -162,7 +170,7 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
 
     if (!isNaN(query)) {
       const tmdbResponse = await fetch(
-        `https://api.themoviedb.org/3/movie/${query}?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR`
+        `https://api.themoviedb.org/3/movie/${query}?api_key=${TMDB_API_KEY}&language=pt-BR`
       );
       
       if (!tmdbResponse.ok) {
@@ -189,7 +197,7 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
     }
 
     const tmdbSearchResponse = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=c0d0e0e40bae98909390cde31c402a9b&language=pt-BR&query=${encodeURIComponent(query)}`
+      `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(query)}`
     );
 
     if (!tmdbSearchResponse.ok) {
@@ -203,11 +211,15 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
         .filter(movie => 
           movie.title.toLowerCase().includes(query.toLowerCase()) ||
           (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
-        )
         .map(async movie => {
+          const detailsResponse = await fetch(
+            `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${TMDB_API_KEY}&language=pt-BR`
+          );
+          const movieDetails = await detailsResponse.json();
+          
           const streamId = await findStreamIdByTmdbId(movie.id);
           return {
-            ...formatMovieData(movie),
+            ...formatMovieData(movieDetails),
             stream_url: streamId ? 
               `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4` :
               null
@@ -233,8 +245,7 @@ app.get('/api/:id/filmes/q', verifyProject, async (req, res) => {
   }
 });
 
-// Listar séries
-app.get('/api/:id/series', verifyProject, async (req, res) => {
+app.get('/:id/series', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
     await incrementRequestCount(projectId, 'series');
@@ -247,7 +258,7 @@ app.get('/api/:id/series', verifyProject, async (req, res) => {
     const seriesData = await apiResponse.json();
     const seriesComLinks = seriesData.map(serie => ({
       ...serie,
-      cover: `${req.protocol}://${req.get('host')}/api/${projectId}/icon/${serie.series_id}`
+      cover: `${req.protocol}://${req.get('host')}/${projectId}/icon/${serie.series_id}`
     }));
 
     res.json({
@@ -263,8 +274,7 @@ app.get('/api/:id/series', verifyProject, async (req, res) => {
   }
 });
 
-// Listar temporadas de uma série
-app.get('/api/:id/series/:seriesId/seasons', verifyProject, async (req, res) => {
+app.get('/:id/series/:seriesId/seasons', verifyProject, async (req, res) => {
   try {
     const { id: projectId, seriesId } = req.params;
     await incrementRequestCount(projectId, 'series_seasons');
@@ -292,8 +302,7 @@ app.get('/api/:id/series/:seriesId/seasons', verifyProject, async (req, res) => 
   }
 });
 
-// Listar episódios de uma temporada
-app.get('/api/:id/series/:seriesId/season/:seasonNumber', verifyProject, async (req, res) => {
+app.get('/:id/series/:seriesId/season/:seasonNumber', verifyProject, async (req, res) => {
   try {
     const { id: projectId, seriesId, seasonNumber } = req.params;
     await incrementRequestCount(projectId, 'series_episodes');
@@ -328,8 +337,7 @@ app.get('/api/:id/series/:seriesId/season/:seasonNumber', verifyProject, async (
   }
 });
 
-// Stream direto
-app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
+app.get('/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
   try {
     const streamId = req.params.streamId;
     const realStreamUrl = `http://${XTREAM_CONFIG.host}:${XTREAM_CONFIG.port}/movie/${XTREAM_CONFIG.username}/${XTREAM_CONFIG.password}/${streamId}.mp4`;
@@ -339,8 +347,7 @@ app.get('/api/:id/stream-direct/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Mapear TMDB ID para Stream ID
-app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
+app.get('/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
   try {
     const tmdbId = req.params.tmdbId;
     const streamId = await findStreamIdByTmdbId(tmdbId);
@@ -361,14 +368,24 @@ app.get('/api/:id/tmdb-to-stream/:tmdbId', verifyProject, async (req, res) => {
   }
 });
 
-async function findStreamIdByTmdbId(tmdbId) {
-  // Implemente a lógica para mapear TMDB IDs para stream IDs do seu sistema Xtream
-  return tmdbId; // Placeholder - substitua por sua lógica real
-}
-
-// Ícone padrão
-app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
+app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
   try {
+    const streamId = req.params.streamId;
+    const tmdbId = await findTmdbIdByStreamId(streamId);
+    
+    if (tmdbId) {
+      const tmdbResponse = await fetch(
+        `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}`
+      );
+      
+      if (tmdbResponse.ok) {
+        const movie = await tmdbResponse.json();
+        if (movie.poster_path) {
+          return res.redirect(`https://image.tmdb.org/t/p/w500${movie.poster_path}`);
+        }
+      }
+    }
+    
     const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
       <rect width="100" height="100" fill="#ddd"/>
       <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
@@ -380,8 +397,7 @@ app.get('/api/:id/icon/:streamId', verifyProject, async (req, res) => {
   }
 });
 
-// Listar animes
-app.get('/api/:id/animes', verifyProject, async (req, res) => {
+app.get('/:id/animes', verifyProject, async (req, res) => {
   try {
     const projectId = req.params.id;
     const incrementResult = await incrementRequestCount(projectId, 'animes');
@@ -421,8 +437,7 @@ function generateAnimeData(projectId) {
   }));
 }
 
-// Endpoint de teste
-app.get('/api/test/:id', async (req, res) => {
+app.get('/test/:id', async (req, res) => {
   try {
     await incrementRequestCount(req.params.id, 'test');
     const { data } = await supabase
@@ -436,10 +451,25 @@ app.get('/api/test/:id', async (req, res) => {
   }
 });
 
-// Rota padrão
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'account', 'login.html'));
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'account', 'register.html'));
+});
+
+async function findStreamIdByTmdbId(tmdbId) {
+  return tmdbId;
+}
+
+async function findTmdbIdByStreamId(streamId) {
+  return null;
+}
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
