@@ -108,30 +108,59 @@ document.addEventListener('DOMContentLoaded', async function() {
             const card = document.createElement('div');
             card.className = 'project-card bg-gray-800 rounded-lg overflow-hidden cursor-pointer';
             card.innerHTML = `
-                <div class="absolute top-2 right-2 bg-solo-dark text-solo-blue border border-solo-blue px-2 py-1 rounded-full text-xs font-bold tracking-wider">
-                    LV. ${project.level || 1}
+                <div class="relative bg-solo-darkest rounded-lg border border-gray-700 shadow-lg overflow-hidden hover:shadow-solo-blue/10 transition-shadow duration-300">
+    <!-- Level Badge -->
+    <div class="absolute top-3 right-3 bg-solo-dark text-solo-blue border border-solo-blue/50 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wider shadow-md">
+        LV. ${project.level || 1}
+    </div>
+    
+    <!-- Header Section -->
+    <div class="p-4 border-b border-gray-700/50">
+        <div class="flex justify-between items-start gap-2">
+            <div class="min-w-0">
+                <h3 class="text-lg font-bold text-white truncate tracking-tight">
+                    ${project.name || 'Sem nome'}
+                </h3>
+                <p class="text-xs text-gray-400 mt-1 tracking-wider">
+                    <i class="bi bi-calendar3 mr-1 opacity-70"></i>
+                    CREATED ${project.created_at ? formatDate(project.created_at) : 'Data desconhecida'}
+                </p>
+            </div>
+            
+            <span class="status-badge flex-shrink-0 ${(project.status || 'active') === 'active' ? 'text-emerald-400' : 'text-amber-400'} text-xs font-semibold px-2.5 py-1 rounded-full ${(project.status || 'active') === 'active' ? 'bg-emerald-900/30' : 'bg-amber-900/30'} border ${(project.status || 'active') === 'active' ? 'border-emerald-400/20' : 'border-amber-400/20'}">
+                ${(project.status || 'active') === 'active' ? 'ACTIVE' : 'PAUSED'}
+            </span>
+        </div>
+    </div>
+    
+    <!-- Content Section -->
+    <div class="p-4">
+        <!-- URL Field -->
+        <div class="flex items-center mb-4 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700/50 hover:bg-gray-800/70 transition-colors">
+            <i class="bi bi-link-45deg text-gray-400 mr-2 text-sm"></i>
+            <span class="text-xs text-gray-300 truncate font-mono">
+                ${project.url || 'Sem URL'}
+            </span>
+        </div>
+        
+        <!-- Requests Info -->
+        <div class="flex justify-between items-center text-xs tracking-wider">
+            <div class="flex items-center">
+                <div class="w-full bg-gray-700 rounded-full h-1.5 mr-2">
+                    <div class="bg-solo-blue h-1.5 rounded-full" style="width: ${Math.min((project.requests_today || 0) / REQUEST_LIMIT_PER_DAY * 100, 100)}%"></div>
                 </div>
-                <div class="p-4 border-b border-gray-700">
-                    <div class="flex justify-between items-start">
-                        <h3 class="text-lg font-semibold text-white tracking-wider">${project.name || 'Sem nome'}</h3>
-                        <span class="status-badge ${(project.status || 'active') === 'active' ? 'text-green-400' : 'text-yellow-400'} text-xs font-medium px-2 py-0.5 rounded-full bg-opacity-20 ${(project.status || 'active') === 'active' ? 'bg-green-900' : 'bg-yellow-900'}">
-                            ${(project.status || 'active') === 'active' ? 'ACTIVE' : 'INACTIVE'}
-                        </span>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-1 tracking-wider">CREATED ${project.created_at ? formatDate(project.created_at) : 'Data desconhecida'}</p>
-                </div>
-                <div class="p-4">
-                    <div class="flex items-center mb-3">
-                        <i class="bi bi-link text-gray-400 mr-2"></i>
-                        <span class="text-xs text-gray-300 truncate">${project.url || 'Sem URL'}</span>
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-400 tracking-wider">
-                        <span>${project.requests_today || 0}/${REQUEST_LIMIT_PER_DAY} REQUESTS TODAY</span>
-                        <span class="flex items-center">
-                            <i class="bi bi-arrow-right text-solo-blue ml-1"></i>
-                        </span>
-                    </div>
-                </div>
+                <span class="text-gray-400 font-medium">
+                    ${project.requests_today || 0}/${REQUEST_LIMIT_PER_DAY}
+                </span>
+            </div>
+            
+            <button class="text-solo-blue hover:text-solo-blue-light transition-colors flex items-center group">
+                <span class="mr-1 text-gray-400 group-hover:text-white text-xs font-medium">Details</span>
+                <i class="bi bi-arrow-right-short text-lg ml-0.5 group-hover:translate-x-0.5 transition-transform"></i>
+            </button>
+        </div>
+    </div>
+</div>
             `;
             card.addEventListener('click', () => {
                 window.location.href = `dashboard.html?project=${encodeURIComponent(project.project_id)}`;
