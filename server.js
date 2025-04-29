@@ -47,6 +47,15 @@ app.use((req, res, next) => {
   next();
 });
 
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'account', 'login.html'));
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'account', 'register.html'));
+});
+
 // Request tracking system
 const requestTracker = {
   requests: new Map(),
@@ -217,3 +226,5 @@ app.listen(port, () => {
   console.log(`Server running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+      
