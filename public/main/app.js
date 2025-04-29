@@ -109,47 +109,48 @@ document.addEventListener('DOMContentLoaded', async function() {
             card.className = 'project-card bg-gray-800 rounded-lg overflow-hidden cursor-pointer';
             card.innerHTML = `
                 <div class="relative bg-solo-darkest rounded-lg border border-gray-700 shadow-lg overflow-hidden hover:shadow-solo-blue/10 transition-shadow duration-300">
-    <!-- Level Badge -->
-    <div class="absolute top-3 right-3 bg-solo-dark text-solo-blue border border-solo-blue/50 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wider shadow-md">
+    <!-- Level Badge - Estilo revisado -->
+    <div class="absolute top-3 right-3 bg-solo-dark text-white border border-solo-blue/50 px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wider shadow-md">
         LV. ${project.level || 1}
     </div>
     
-    <!-- Header Section -->
-    <div class="p-4 border-b border-gray-700/50">
-        <div class="flex justify-between items-start gap-2">
-            <div class="min-w-0">
+    <!-- Header Section com melhor espaçamento -->
+    <div class="p-4 pb-3 border-b border-gray-700/50">
+        <div class="flex justify-between items-start gap-3">
+            <div class="min-w-0 space-y-1.5"> <!-- Espaçamento vertical entre elementos -->
                 <h3 class="text-lg font-bold text-white truncate tracking-tight">
                     ${project.name || 'Sem nome'}
                 </h3>
-                <p class="text-xs text-gray-400 mt-1 tracking-wider">
-                    <i class="bi bi-calendar3 mr-1 opacity-70"></i>
+                <p class="text-xs text-gray-400 tracking-wider flex items-center">
+                    <i class="bi bi-calendar3 mr-1.5 opacity-70"></i>
                     CREATED ${project.created_at ? formatDate(project.created_at) : 'Data desconhecida'}
                 </p>
             </div>
             
-            <span class="status-badge flex-shrink-0 ${(project.status || 'active') === 'active' ? 'text-emerald-400' : 'text-amber-400'} text-xs font-semibold px-2.5 py-1 rounded-full ${(project.status || 'active') === 'active' ? 'bg-emerald-900/30' : 'bg-amber-900/30'} border ${(project.status || 'active') === 'active' ? 'border-emerald-400/20' : 'border-amber-400/20'}">
+            <!-- Status Badge com margem melhorada -->
+            <span class="status-badge flex-shrink-0 ${(project.status || 'active') === 'active' ? 'text-emerald-400' : 'text-amber-400'} text-xs font-semibold px-2.5 py-1 rounded-full ${(project.status || 'active') === 'active' ? 'bg-emerald-900/30' : 'bg-amber-900/30'} border ${(project.status || 'active') === 'active' ? 'border-emerald-400/20' : 'border-amber-400/20'} mt-0.5">
                 ${(project.status || 'active') === 'active' ? 'ACTIVE' : 'PAUSED'}
             </span>
         </div>
     </div>
     
-    <!-- Content Section -->
-    <div class="p-4">
-        <!-- URL Field -->
-        <div class="flex items-center mb-4 bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-700/50 hover:bg-gray-800/70 transition-colors">
-            <i class="bi bi-link-45deg text-gray-400 mr-2 text-sm"></i>
+    <!-- Content Section com espaçamento revisado -->
+    <div class="p-4 space-y-4"> <!-- Espaçamento vertical entre elementos -->
+        <!-- URL Field com padding aumentado -->
+        <div class="flex items-center bg-gray-800/50 rounded-lg px-3.5 py-2.5 border border-gray-700/50 hover:bg-gray-800/70 transition-colors">
+            <i class="bi bi-link-45deg text-gray-400 mr-3 text-sm"></i>
             <span class="text-xs text-gray-300 truncate font-mono">
                 ${project.url || 'Sem URL'}
             </span>
         </div>
         
-        <!-- Requests Info -->
+        <!-- Requests Info com alinhamento melhorado -->
         <div class="flex justify-between items-center text-xs tracking-wider">
-            <div class="flex items-center">
-                <div class="w-full bg-gray-700 rounded-full h-1.5 mr-2">
+            <div class="flex items-center w-full max-w-[180px]"> <!-- Limite de largura -->
+                <div class="w-full bg-gray-700 rounded-full h-1.5 mr-3">
                     <div class="bg-solo-blue h-1.5 rounded-full" style="width: ${Math.min((project.requests_today || 0) / REQUEST_LIMIT_PER_DAY * 100, 100)}%"></div>
                 </div>
-                <span class="text-gray-400 font-medium">
+                <span class="text-gray-400 font-medium whitespace-nowrap">
                     ${project.requests_today || 0}/${REQUEST_LIMIT_PER_DAY}
                 </span>
             </div>
@@ -270,3 +271,4 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Iniciar a aplicação
     initialize();
 });
+            
