@@ -210,7 +210,7 @@ app.get('/:id/filmes/q', verifyProject, async (req, res) => {
       searchData.results
         .filter(movie => 
           movie.title.toLowerCase().includes(query.toLowerCase()) ||
-          (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase()))
+          (movie.original_title && movie.original_title.toLowerCase().includes(query.toLowerCase())))
         .map(async movie => {
           const detailsResponse = await fetch(
             `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${TMDB_API_KEY}&language=pt-BR`
@@ -390,7 +390,8 @@ app.get('/:id/icon/:streamId', verifyProject, async (req, res) => {
       <rect width="100" height="100" fill="#ddd"/>
       <text x="50" y="50" font-family="Arial" font-size="20" text-anchor="middle" fill="#666">Icon</text>
     </svg>`;
-    res.set({ 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
+    res.set('Content-Type', 'image/svg+xml');
+    res.set('Cache-Control', 'public, max-age=86400');
     res.send(svgIcon);
   } catch (err) {
     res.status(500).send('Icon error');
@@ -453,14 +454,6 @@ app.get('/test/:id', async (req, res) => {
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'account', 'login.html'));
-});
-
-app.get('/register', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'account', 'register.html'));
 });
 
 async function findStreamIdByTmdbId(tmdbId) {
